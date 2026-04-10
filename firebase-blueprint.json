@@ -1,0 +1,300 @@
+{
+  "entities": {
+    "Address": {
+      "title": "Address",
+      "description": "Structured address information",
+      "type": "object",
+      "properties": {
+        "street": { "type": "string" },
+        "number": { "type": "string" },
+        "lot": { "type": "string" },
+        "floor": { "type": "string" },
+        "door": { "type": "string" },
+        "postalCode": { "type": "string" },
+        "locality": { "type": "string" },
+        "municipality": { "type": "string" },
+        "district": { "type": "string" },
+        "country": { "type": "string" }
+      },
+      "required": ["street", "number", "postalCode", "locality", "municipality", "district", "country"]
+    },
+    "Property": {
+      "title": "Property",
+      "description": "A real estate property (building, apartment, etc.)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "matricialArticle": { "type": "string" },
+        "usageLicense": { "type": "string" },
+        "energyCertificate": { "type": "string" },
+        "type": { "type": "string", "enum": ["Moradia", "Apartamento", "Garagem/Box", "Armazém", "Loja", "Espaço Comercial"] },
+        "typology": { "type": "string", "enum": ["T0", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9"] },
+        "area": { "type": "number" },
+        "address": { "$ref": "Address" },
+        "observations": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "type", "typology", "address", "ownerId"]
+    },
+    "Unit": {
+      "title": "Unit",
+      "description": "A rentable space within a Property.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "propertyId": { "type": "string" },
+        "type": { "type": "string", "enum": ["Habitação Completa", "Quarto Individual", "Quarto Partilhado", "Assoalhada", "Anexo"] },
+        "name": { "type": "string" },
+        "inventory": { "type": "array", "items": { "type": "string" } },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["propertyId", "type", "name", "ownerId"]
+    },
+    "Tenant": {
+      "title": "Tenant",
+      "description": "A person renting a unit.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "nif": { "type": "string" },
+        "documentType": { "type": "string", "enum": ["Cartão de Cidadão", "Bilhete de Identidade", "Passaporte", "Título de Residência", "Autorização de Residência", "Cartão de Residência UE"] },
+        "documentNumber": { "type": "string" },
+        "documentValidity": { "type": "string", "format": "date" },
+        "nationality": { "type": "string" },
+        "birthDate": { "type": "string", "format": "date" },
+        "address": { "$ref": "Address" },
+        "phone": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "nif", "ownerId"]
+    },
+    "Contract": {
+      "title": "Contract",
+      "description": "Lease agreement between landlord and tenant(s).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "propertyId": { "type": "string" },
+        "unitId": { "type": "string" },
+        "type": { "type": "string", "enum": ["Com Prazo Certo", "Sem Termo", "De Curta Duração", "Arrendamento de Quarto", "Comodato"] },
+        "tenantIds": { "type": "array", "items": { "type": "string" } },
+        "startDate": { "type": "string", "format": "date" },
+        "endDate": { "type": "string", "format": "date" },
+        "rentAmount": { "type": "number" },
+        "paymentDay": { "type": "number" },
+        "depositAmount": { "type": "number" },
+        "otherValues": { "type": "array", "items": { "type": "object", "properties": { "name": { "type": "string" }, "value": { "type": "number" } } } },
+        "expensesConfig": {
+          "type": "object",
+          "properties": {
+            "water": { "type": "object", "properties": { "method": { "type": "string", "enum": ["Fatura", "Contagem Manual", "Valor Fixo", "Não Incluir"] }, "ref": { "type": "string" }, "pricePerUnit": { "type": "number" }, "fixedValue": { "type": "number" } } },
+            "electricity": { "type": "object", "properties": { "method": { "type": "string", "enum": ["Fatura", "Contagem Manual", "Valor Fixo", "Não Incluir"] }, "ref": { "type": "string" }, "pricePerUnit": { "type": "number" }, "fixedValue": { "type": "number" } } },
+            "communications": { "type": "object", "properties": { "method": { "type": "string", "enum": ["Fatura", "Valor Fixo", "Não Incluir"] }, "ref": { "type": "string" }, "fixedValue": { "type": "number" } } },
+            "cleaning": { "type": "object", "properties": { "method": { "type": "string", "enum": ["Fatura", "Horas", "Valor Fixo", "Não Incluir"] }, "ref": { "type": "string" }, "pricePerHour": { "type": "number" }, "fixedValue": { "type": "number" } } },
+            "others": { "type": "array", "items": { "type": "object", "properties": { "name": { "type": "string" }, "value": { "type": "number" } } } }
+          }
+        },
+        "status": { "type": "string", "enum": ["Draft", "Active", "Finished", "Canceled", "Renewed"] },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["propertyId", "unitId", "type", "tenantIds", "startDate", "rentAmount", "paymentDay", "status", "ownerId"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Financial transaction (income or expense).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["Renda", "Caução", "Despesa", "Encargo", "Reparação", "Outro"] },
+        "propertyId": { "type": "string" },
+        "unitId": { "type": "string" },
+        "contractId": { "type": "string" },
+        "tenantId": { "type": "string" },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "paymentMethod": { "type": "string", "enum": ["Dinheiro", "Transferência", "MBWay", "Débito direto", "Outro"] },
+        "dueDate": { "type": "string", "format": "date" },
+        "paymentDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Pending", "Paid", "Partial", "Late"] },
+        "observations": { "type": "string" },
+        "attachments": { "type": "array", "items": { "type": "string" } },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["type", "propertyId", "amount", "dueDate", "status", "ownerId"]
+    },
+    "Receipt": {
+      "title": "Receipt",
+      "description": "Proof of payment issued to tenant.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "paymentId": { "type": "string" },
+        "code": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date" },
+        "emissionDate": { "type": "string", "format": "date" },
+        "propertyId": { "type": "string" },
+        "unitId": { "type": "string" },
+        "tenantId": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["Por Emitir", "Em Atraso", "Emitido"] },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["paymentId", "code", "amount", "status", "ownerId"]
+    },
+    "UtilityExpense": {
+      "title": "Utility Expense",
+      "description": "Monthly consumption of water or electricity.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "monthYear": { "type": "string", "description": "Format: MM-YYYY" },
+        "propertyId": { "type": "string" },
+        "unitId": { "type": "string" },
+        "tenantId": { "type": "string" },
+        "type": { "type": "string", "enum": ["Water", "Electricity"] },
+        "previousReading": { "type": "number" },
+        "currentReading": { "type": "number" },
+        "pricePerUnit": { "type": "number" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["Por Pagar", "Pago"] },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["monthYear", "propertyId", "unitId", "type", "currentReading", "amount", "status", "ownerId"]
+    },
+    "LandlordCharge": {
+      "title": "Landlord Charge",
+      "description": "Recurring costs for the landlord.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "propertyId": { "type": "string" },
+        "type": { "type": "string", "enum": ["IMI", "AIMI", "Condomínio", "Seguro", "Prestação ao Banco", "Licenças", "Outros"] },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "frequency": { "type": "string", "enum": ["Anual", "Semestral", "Trimestral", "Mensal", "Semanal", "Diário", "Único"] },
+        "paymentDay": { "type": "number" },
+        "paymentMonth": { "type": "number" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["propertyId", "type", "amount", "frequency", "ownerId"]
+    },
+    "FinancialMovement": {
+      "title": "Financial Movement",
+      "description": "Consolidated transaction record for reports.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "type": { "type": "string", "enum": ["Income", "Expense"] },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "propertyId": { "type": "string" },
+        "unitId": { "type": "string" },
+        "relatedId": { "type": "string", "description": "ID of the Payment, UtilityExpense or LandlordCharge" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["date", "type", "amount", "ownerId"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "General expense record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "propertyId": { "type": "string" },
+        "unitId": { "type": "string" },
+        "type": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Pending", "Paid"] },
+        "description": { "type": "string" },
+        "method": { "type": "string", "enum": ["Fatura", "Contagem Manual", "Valor Fixo"] },
+        "previousReading": { "type": "number" },
+        "currentReading": { "type": "number" },
+        "pricePerUnit": { "type": "number" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["propertyId", "type", "amount", "date", "status", "ownerId"]
+    },
+    "LandlordExpense": {
+      "title": "Landlord Expense",
+      "description": "Expense record for the landlord.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "propertyId": { "type": "string" },
+        "type": { "type": "string", "enum": ["IMI", "AIMI", "Condomínio", "Seguro", "Prestação ao Banco", "Licenças", "Outros"] },
+        "amount": { "type": "number" },
+        "frequency": { "type": "string", "enum": ["Anual", "Semestral", "Trimestral", "Mensal", "Único"] },
+        "dueDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Pending", "Paid", "Late"] },
+        "description": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["propertyId", "type", "amount", "frequency", "dueDate", "status", "ownerId"]
+    },
+    "Movement": {
+      "title": "Movement",
+      "description": "Financial movement record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "propertyId": { "type": "string" },
+        "unitId": { "type": "string" },
+        "type": { "type": "string", "enum": ["Entrada", "Saída"] },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Concluído", "Pendente", "Cancelado"] },
+        "description": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["propertyId", "type", "amount", "date", "status", "description", "ownerId"]
+    },
+    "MaintenanceTicket": {
+      "title": "Maintenance Ticket",
+      "description": "A request for repair or maintenance.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "propertyId": { "type": "string" },
+        "unitId": { "type": "string" },
+        "description": { "type": "string" },
+        "priority": { "type": "string", "enum": ["Low", "Medium", "High", "Urgent"] },
+        "status": { "type": "string", "enum": ["Open", "In-Progress", "Closed"] },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["propertyId", "description", "priority", "status", "ownerId"]
+    }
+  },
+  "firestore": {
+    "/properties/{propertyId}": { "schema": "Property", "description": "Collection of properties" },
+    "/units/{unitId}": { "schema": "Unit", "description": "Collection of units within properties" },
+    "/tenants/{tenantId}": { "schema": "Tenant", "description": "Collection of tenants" },
+    "/contracts/{contractId}": { "schema": "Contract", "description": "Collection of rental contracts" },
+    "/payments/{paymentId}": { "schema": "Payment", "description": "Collection of payments" },
+    "/receipts/{receiptId}": { "schema": "Receipt", "description": "Collection of receipts" },
+    "/utilityExpenses/{expenseId}": { "schema": "UtilityExpense", "description": "Collection of utility consumption records" },
+    "/landlordExpenses/{expenseId}": { "schema": "LandlordExpense", "description": "Collection of landlord expenses" },
+    "/financialMovements/{movementId}": { "schema": "FinancialMovement", "description": "Consolidated financial movements" },
+    "/expenses/{expenseId}": { "schema": "Expense", "description": "Collection of general expenses" },
+    "/movements/{movementId}": { "schema": "Movement", "description": "Collection of financial movements" },
+    "/maintenanceTickets/{ticketId}": { "schema": "MaintenanceTicket", "description": "Collection of maintenance tickets" }
+  }
+}

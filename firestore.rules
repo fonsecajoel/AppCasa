@@ -1,0 +1,238 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(ownerId) {
+      return isAuthenticated() && request.auth.uid == ownerId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.ownerId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == "fonsecaajoel@gmail.com" && request.auth.token.email_verified == true);
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidProperty(data) {
+      return hasRequiredFields(['name', 'type', 'typology', 'address', 'ownerId']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.type in ["Moradia", "Apartamento", "Garagem/Box", "Armazém", "Loja", "Espaço Comercial"] &&
+             data.typology in ["T0", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9"] &&
+             data.ownerId == request.auth.uid;
+    }
+
+    function isValidUnit(data) {
+      return hasRequiredFields(['propertyId', 'type', 'name', 'ownerId']) &&
+             data.propertyId is string &&
+             data.type in ["Habitação Completa", "Quarto Individual", "Quarto Partilhado", "Assoalhada", "Anexo"] &&
+             data.name is string && data.name.size() > 0 &&
+             data.ownerId == request.auth.uid;
+    }
+
+    function isValidTenant(data) {
+      return hasRequiredFields(['name', 'nif', 'ownerId']) &&
+             data.name is string && data.name.size() > 0 &&
+             data.nif is string && data.nif.size() > 0 &&
+             data.ownerId == request.auth.uid;
+    }
+
+    function isValidContract(data) {
+      return hasRequiredFields(['propertyId', 'unitId', 'type', 'tenantIds', 'startDate', 'rentAmount', 'paymentDay', 'status', 'ownerId']) &&
+             data.propertyId is string && data.unitId is string &&
+             data.type in ["Com Prazo Certo", "Sem Termo", "De Curta Duração", "Arrendamento de Quarto", "Comodato"] &&
+             data.tenantIds is list &&
+             data.rentAmount is number && data.rentAmount >= 0 &&
+             data.paymentDay is number && data.paymentDay >= 1 && data.paymentDay <= 31 &&
+             data.status in ["Draft", "Active", "Finished", "Canceled", "Renewed"] &&
+             data.ownerId == request.auth.uid;
+    }
+
+    function isValidPayment(data) {
+      return hasRequiredFields(['type', 'propertyId', 'amount', 'dueDate', 'status', 'ownerId']) &&
+             data.type in ["Renda", "Caução", "Despesa", "Encargo", "Reparação", "Outro"] &&
+             data.amount is number && data.amount >= 0 &&
+             data.status in ["Pending", "Paid", "Partial", "Late"] &&
+             data.ownerId == request.auth.uid;
+    }
+
+    function isValidReceipt(data) {
+      return hasRequiredFields(['amount', 'status', 'ownerId']) &&
+             (!('paymentId' in data) || data.paymentId is string) &&
+             (!('code' in data) || data.code is string) &&
+             data.amount is number && data.amount >= 0 &&
+             data.status in ["Por Emitir", "Em Atraso", "Emitido"] &&
+             data.ownerId == request.auth.uid;
+    }
+
+    function isValidUtilityExpense(data) {
+      return hasRequiredFields(['monthYear', 'propertyId', 'unitId', 'type', 'currentReading', 'amount', 'status', 'ownerId']) &&
+             data.type in ["Water", "Electricity"] &&
+             data.amount is number && data.amount >= 0 &&
+             data.status in ["Por Pagar", "Pago"] &&
+             data.ownerId == request.auth.uid;
+    }
+
+    function isValidFinancialMovement(data) {
+      return hasRequiredFields(['date', 'type', 'amount', 'ownerId']) &&
+             data.type in ["Income", "Expense"] &&
+             data.amount is number && data.amount >= 0 &&
+             data.ownerId == request.auth.uid;
+    }
+
+    function isValidMaintenanceTicket(data) {
+      return hasRequiredFields(['propertyId', 'description', 'priority', 'status', 'ownerId']) &&
+             data.propertyId is string &&
+             data.description is string && data.description.size() > 0 &&
+             data.priority in ["Low", "Medium", "High", "Urgent"] &&
+             data.status in ["Open", "In-Progress", "Closed"] &&
+             data.ownerId == request.auth.uid;
+    }
+
+    function isValidExpense(data) {
+      return hasRequiredFields(['propertyId', 'type', 'amount', 'date', 'status', 'ownerId']) &&
+             data.propertyId is string &&
+             data.type is string &&
+             data.amount is number && data.amount >= 0 &&
+             data.status in ["Pending", "Paid"] &&
+             (!('method' in data) || data.method in ["Fatura", "Contagem Manual", "Valor Fixo"]) &&
+             (!('previousReading' in data) || data.previousReading is number) &&
+             (!('currentReading' in data) || data.currentReading is number) &&
+             (!('pricePerUnit' in data) || data.pricePerUnit is number) &&
+             data.ownerId == request.auth.uid;
+    }
+
+    function isValidLandlordExpense(data) {
+      return hasRequiredFields(['propertyId', 'type', 'amount', 'frequency', 'dueDate', 'status', 'ownerId']) &&
+             data.propertyId is string &&
+             data.type in ["IMI", "AIMI", "Condomínio", "Seguro", "Prestação ao Banco", "Licenças", "Outros"] &&
+             data.amount is number && data.amount >= 0 &&
+             data.frequency in ["Anual", "Semestral", "Trimestral", "Mensal", "Único"] &&
+             data.status in ["Pending", "Paid", "Late"] &&
+             data.ownerId == request.auth.uid;
+    }
+
+    function isValidMovement(data) {
+      return hasRequiredFields(['propertyId', 'type', 'amount', 'date', 'status', 'description', 'ownerId']) &&
+             data.propertyId is string &&
+             data.type in ["Entrada", "Saída"] &&
+             data.amount is number && data.amount >= 0 &&
+             data.status in ["Concluído", "Pendente", "Cancelado"] &&
+             data.description is string &&
+             data.ownerId == request.auth.uid;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /properties/{id} {
+      allow read: if isOwner(resource.data.ownerId) || isAdmin();
+      allow create: if isAuthenticated() && isValidProperty(request.resource.data);
+      allow update: if (isDocOwner() || isAdmin()) && isValidProperty(request.resource.data);
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /units/{id} {
+      allow read: if isOwner(resource.data.ownerId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUnit(request.resource.data);
+      allow update: if (isDocOwner() || isAdmin()) && isValidUnit(request.resource.data);
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /tenants/{id} {
+      allow read: if isOwner(resource.data.ownerId) || isAdmin();
+      allow create: if isAuthenticated() && isValidTenant(request.resource.data);
+      allow update: if (isDocOwner() || isAdmin()) && isValidTenant(request.resource.data);
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /contracts/{id} {
+      allow read: if isOwner(resource.data.ownerId) || isAdmin();
+      allow create: if isAuthenticated() && isValidContract(request.resource.data);
+      allow update: if (isDocOwner() || isAdmin()) && isValidContract(request.resource.data);
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /payments/{id} {
+      allow read: if isOwner(resource.data.ownerId) || isAdmin();
+      allow create: if isAuthenticated() && isValidPayment(request.resource.data);
+      allow update: if (isDocOwner() || isAdmin()) && isValidPayment(request.resource.data);
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /receipts/{id} {
+      allow read: if isOwner(resource.data.ownerId) || isAdmin();
+      allow create: if isAuthenticated() && isValidReceipt(request.resource.data);
+      allow update: if (isDocOwner() || isAdmin()) && isValidReceipt(request.resource.data);
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /utilityExpenses/{id} {
+      allow read: if isOwner(resource.data.ownerId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUtilityExpense(request.resource.data);
+      allow update: if (isDocOwner() || isAdmin()) && isValidUtilityExpense(request.resource.data);
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /financialMovements/{id} {
+      allow read: if isOwner(resource.data.ownerId) || isAdmin();
+      allow create: if isAuthenticated() && isValidFinancialMovement(request.resource.data);
+      allow update: if (isDocOwner() || isAdmin()) && isValidFinancialMovement(request.resource.data);
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /maintenanceTickets/{id} {
+      allow read: if isOwner(resource.data.ownerId) || isAdmin();
+      allow create: if isAuthenticated() && isValidMaintenanceTicket(request.resource.data);
+      allow update: if (isDocOwner() || isAdmin()) && isValidMaintenanceTicket(request.resource.data);
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /expenses/{id} {
+      allow read: if isOwner(resource.data.ownerId) || isAdmin();
+      allow create: if isAuthenticated() && isValidExpense(request.resource.data);
+      allow update: if (isDocOwner() || isAdmin()) && isValidExpense(request.resource.data);
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /landlordExpenses/{id} {
+      allow read: if isOwner(resource.data.ownerId) || isAdmin();
+      allow create: if isAuthenticated() && isValidLandlordExpense(request.resource.data);
+      allow update: if (isDocOwner() || isAdmin()) && isValidLandlordExpense(request.resource.data);
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /movements/{id} {
+      allow read: if isOwner(resource.data.ownerId) || isAdmin();
+      allow create: if isAuthenticated() && isValidMovement(request.resource.data);
+      allow update: if (isDocOwner() || isAdmin()) && isValidMovement(request.resource.data);
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
