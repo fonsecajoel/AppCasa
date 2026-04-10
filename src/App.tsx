@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { useState, useEffect } from 'react';
+import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from './components/ui/sonner';
+import { signInAnonymously } from 'firebase/auth';
+import { auth } from './firebase';
 import { 
   LayoutDashboard, 
   Building2, 
@@ -11,13 +13,10 @@ import {
   Droplets,
   ArrowLeftRight,
   Settings as SettingsIcon,
-  LogOut,
   Sparkles,
   PiggyBank,
   Wrench
 } from 'lucide-react';
-import { Button } from './components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from './components/ui/avatar';
 import Dashboard from './components/Dashboard';
 import PropertyManager from './components/PropertyManager';
 import TenantManager from './components/TenantManager';
@@ -32,77 +31,17 @@ import Movements from './components/Movements';
 import Settings from './components/Settings';
 
 function AppContent() {
-  const { user, loading, login, loginWithCredentials, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [ready, setReady] = useState(false);
 
-  const handleCredentialLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoggingIn(true);
-    try {
-      await loginWithCredentials(username, password);
-    } catch (err) {
-      // Error handled in context or here
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
+  useEffect(() => {
+    signInAnonymously(auth).then(() => setReady(true)).catch(() => setReady(true));
+  }, []);
 
-  if (loading) {
+  if (!ready) {
     return (
       <div className="flex items-center justify-center h-screen bg-neutral-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen bg-neutral-50 p-4">
-        <div className="max-w-md w-full text-center space-y-8">
-          <div className="space-y-2">
-            <h1 className="text-4xl font-bold tracking-tight text-neutral-900">ImmoFlow</h1>
-            <p className="text-neutral-500">Gestão inteligente de propriedades simplificada.</p>
-          </div>
-          <div className="bg-white p-8 rounded-3xl shadow-xl border border-neutral-100 space-y-6">
-            <form onSubmit={handleCredentialLogin} className="space-y-4 text-left">
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider ml-1">Utilizador</label>
-                <input 
-                  type="text" 
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  className="w-full h-12 px-4 bg-neutral-50 border-none rounded-xl focus:ring-2 focus:ring-neutral-200 outline-none transition-all"
-                  placeholder="admin"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider ml-1">Palavra-passe</label>
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  className="w-full h-12 px-4 bg-neutral-50 border-none rounded-xl focus:ring-2 focus:ring-neutral-200 outline-none transition-all"
-                  placeholder="••••••"
-                />
-              </div>
-              <Button type="submit" disabled={isLoggingIn} className="w-full h-12 bg-[#1E293B] hover:bg-[#334155] rounded-xl text-lg font-bold shadow-lg shadow-neutral-200 transition-all active:scale-[0.98]">
-                {isLoggingIn ? 'A entrar...' : 'Entrar'}
-              </Button>
-            </form>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-neutral-100"></div></div>
-              <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-neutral-400 font-bold">ou</span></div>
-            </div>
-
-            <Button onClick={login} variant="outline" className="w-full h-12 border-neutral-200 hover:bg-neutral-50 rounded-xl text-neutral-600 font-bold transition-all">
-              Entrar com Google
-            </Button>
-          </div>
-        </div>
       </div>
     );
   }
@@ -129,22 +68,6 @@ function AppContent() {
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-[#1E293B] rounded-lg flex items-center justify-center text-white font-black text-xs">IF</div>
           <span className="text-xl font-black tracking-tighter text-[#1E293B]">IMMOFLOW</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-bold text-[#1E293B]">{user.displayName || 'Joel Fonseca'}</p>
-              <p className="text-[10px] text-neutral-400 font-medium uppercase tracking-wider">Proprietário</p>
-            </div>
-            <Avatar className="h-10 w-10 border-2 border-neutral-50 shadow-sm">
-              <AvatarImage src={user.photoURL || ''} />
-              <AvatarFallback className="bg-blue-50 text-blue-600 font-bold">{user.displayName?.charAt(0) || 'J'}</AvatarFallback>
-            </Avatar>
-            <div className="h-8 w-px bg-neutral-100 mx-1" />
-            <Button variant="ghost" size="icon" onClick={logout} className="text-neutral-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl">
-              <LogOut size={20} />
-            </Button>
-          </div>
         </div>
       </header>
 

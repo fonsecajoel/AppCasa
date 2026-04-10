@@ -18,6 +18,14 @@ export function AddressInput({ value, onChange }: AddressInputProps) {
     onChange({ ...value, [field]: val });
   };
 
+  const handlePostalCodeChange = (raw: string) => {
+    const digits = raw.replace(/\D/g, '').slice(0, 7);
+    const formatted = digits.length > 4
+      ? `${digits.slice(0, 4)}-${digits.slice(4)}`
+      : digits;
+    handleChange('postalCode', formatted);
+  };
+
   const fetchAddress = async (cp: string) => {
     if (!/^\d{4}-\d{3}$/.test(cp)) return;
     if (cp === lastFetchedCP) return;
@@ -25,20 +33,18 @@ export function AddressInput({ value, onChange }: AddressInputProps) {
     setLoading(true);
     setLastFetchedCP(cp);
     try {
-      // Using a public API for Portuguese postal codes
       const response = await fetch(`https://json.geoapi.pt/cp/${cp.replace('-', '')}`);
       if (response.ok) {
         const data = await response.json();
-        // The API returns an array of results or a single object depending on the endpoint
-        // For /cp/{cp} it usually returns an object with details
         if (data) {
+          const street = data.partes?.[0]?.['Artéria'] || data.partes?.[0]?.arteria || '';
           onChange({
             ...value,
             postalCode: cp,
-            locality: data.freguesia || data.localidade || value.locality,
-            municipality: data.concelho || value.municipality,
-            district: data.distrito || value.district,
-            street: data.morada || value.street,
+            locality: data.Localidade || data.localidade || value.locality,
+            municipality: data.Concelho || data.concelho || value.municipality,
+            district: data.Distrito || data.distrito || value.district,
+            street: street || value.street,
           });
           toast.success('Morada preenchida automaticamente');
         }
@@ -83,7 +89,7 @@ export function AddressInput({ value, onChange }: AddressInputProps) {
             id="postalCode" 
             placeholder="0000-000" 
             value={value.postalCode} 
-            onChange={(e) => handleChange('postalCode', e.target.value)}
+            onChange={(e) => handlePostalCodeChange(e.target.value)}
             className={loading ? 'opacity-50' : ''}
           />
         </div>
