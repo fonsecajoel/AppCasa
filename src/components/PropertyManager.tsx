@@ -175,8 +175,16 @@ export default function PropertyManager() {
     setPropertyUnits([...propertyUnits, { name: '', type: 'Habitação Completa' }]);
   };
 
+  const removeUnitField = (index: number) => {
+    setPropertyUnits(propertyUnits.filter((_, i) => i !== index));
+  };
+
   const addChargeField = () => {
-    setPropertyCharges([...propertyCharges, { type: 'IMI', amount: 0, frequency: 'Anual' }]);
+    setPropertyCharges([...propertyCharges, { type: 'IMI', amount: 0, frequency: 'Anual', nextDueDate: '' }]);
+  };
+
+  const removeChargeField = (index: number) => {
+    setPropertyCharges(propertyCharges.filter((_, i) => i !== index));
   };
 
   return (
@@ -276,7 +284,7 @@ export default function PropertyManager() {
                 </div>
                 <div className="space-y-3">
                   {propertyUnits.map((u, i) => (
-                    <div key={i} className="grid grid-cols-2 gap-3 p-3 border rounded-xl bg-neutral-50">
+                    <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-3 p-3 border rounded-xl bg-neutral-50">
                       <div className="grid gap-1">
                         <Label className="text-[10px]">Nome da Unidade</Label>
                         <Input value={u.name} onChange={e => {
@@ -302,6 +310,11 @@ export default function PropertyManager() {
                           </SelectContent>
                         </Select>
                       </div>
+                      <div className="flex items-end">
+                        <Button variant="ghost" size="icon" onClick={() => removeUnitField(i)} className="text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg h-9 w-9">
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -316,50 +329,65 @@ export default function PropertyManager() {
                 </div>
                 <div className="space-y-3">
                   {propertyCharges.map((c, i) => (
-                    <div key={i} className="grid grid-cols-3 gap-3 p-3 border rounded-xl bg-neutral-50">
-                      <div className="grid gap-1">
-                        <Label className="text-[10px]">Tipo</Label>
-                        <Select value={c.type} onValueChange={(v: any) => {
-                          const updated = [...propertyCharges];
-                          updated[i].type = v;
-                          setPropertyCharges(updated);
-                        }}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="IMI">IMI</SelectItem>
-                            <SelectItem value="AIMI">AIMI</SelectItem>
-                            <SelectItem value="Condomínio">Condomínio</SelectItem>
-                            <SelectItem value="Seguro">Seguro</SelectItem>
-                            <SelectItem value="Prestação ao Banco">Prestação ao Banco</SelectItem>
-                            <SelectItem value="Licenças">Licenças</SelectItem>
-                            <SelectItem value="Outros">Outros</SelectItem>
-                          </SelectContent>
-                        </Select>
+                    <div key={i} className="p-3 border rounded-xl bg-neutral-50 space-y-3">
+                      <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-3">
+                        <div className="grid gap-1">
+                          <Label className="text-[10px]">Tipo</Label>
+                          <Select value={c.type} onValueChange={(v: any) => {
+                            const updated = [...propertyCharges];
+                            updated[i].type = v;
+                            setPropertyCharges(updated);
+                          }}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="IMI">IMI</SelectItem>
+                              <SelectItem value="AIMI">AIMI</SelectItem>
+                              <SelectItem value="Condomínio">Condomínio</SelectItem>
+                              <SelectItem value="Seguro">Seguro</SelectItem>
+                              <SelectItem value="Prestação ao Banco">Prestação ao Banco</SelectItem>
+                              <SelectItem value="Licenças">Licenças</SelectItem>
+                              <SelectItem value="Outros">Outros</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="grid gap-1">
+                          <Label className="text-[10px]">Valor (€)</Label>
+                          <Input type="number" value={c.amount} onChange={e => {
+                            const updated = [...propertyCharges];
+                            updated[i].amount = parseFloat(e.target.value);
+                            setPropertyCharges(updated);
+                          }} />
+                        </div>
+                        <div className="grid gap-1">
+                          <Label className="text-[10px]">Frequência</Label>
+                          <Select value={c.frequency} onValueChange={(v: any) => {
+                            const updated = [...propertyCharges];
+                            updated[i].frequency = v;
+                            setPropertyCharges(updated);
+                          }}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Anual">Anual</SelectItem>
+                              <SelectItem value="Semestral">Semestral</SelectItem>
+                              <SelectItem value="Trimestral">Trimestral</SelectItem>
+                              <SelectItem value="Mensal">Mensal</SelectItem>
+                              <SelectItem value="Único">Único</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-end">
+                          <Button variant="ghost" size="icon" onClick={() => removeChargeField(i)} className="text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg h-9 w-9">
+                            <Trash2 size={14} />
+                          </Button>
+                        </div>
                       </div>
                       <div className="grid gap-1">
-                        <Label className="text-[10px]">Valor (€)</Label>
-                        <Input type="number" value={c.amount} onChange={e => {
+                        <Label className="text-[10px]">Próxima Data de Pagamento</Label>
+                        <Input type="date" value={c.nextDueDate || ''} onChange={e => {
                           const updated = [...propertyCharges];
-                          updated[i].amount = parseFloat(e.target.value);
+                          updated[i].nextDueDate = e.target.value;
                           setPropertyCharges(updated);
                         }} />
-                      </div>
-                      <div className="grid gap-1">
-                        <Label className="text-[10px]">Frequência</Label>
-                        <Select value={c.frequency} onValueChange={(v: any) => {
-                          const updated = [...propertyCharges];
-                          updated[i].frequency = v;
-                          setPropertyCharges(updated);
-                        }}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Anual">Anual</SelectItem>
-                            <SelectItem value="Semestral">Semestral</SelectItem>
-                            <SelectItem value="Trimestral">Trimestral</SelectItem>
-                            <SelectItem value="Mensal">Mensal</SelectItem>
-                            <SelectItem value="Único">Único</SelectItem>
-                          </SelectContent>
-                        </Select>
                       </div>
                     </div>
                   ))}
