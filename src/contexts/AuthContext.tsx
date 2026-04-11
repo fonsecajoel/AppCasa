@@ -1,5 +1,15 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, User, signInWithPopup, GoogleAuthProvider, signOut, signInAnonymously, updateProfile } from 'firebase/auth';
+import {
+  onAuthStateChanged,
+  User,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  updateProfile,
+} from 'firebase/auth';
 import { auth } from '../firebase';
 import { toast } from 'sonner';
 
@@ -7,7 +17,9 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: () => Promise<void>;
-  loginWithCredentials: (u: string, p: string) => Promise<void>;
+  loginWithEmail: (email: string, password: string) => Promise<void>;
+  registerWithEmail: (email: string, password: string, name: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -18,8 +30,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
       setLoading(false);
     });
     return unsubscribe;
@@ -30,14 +42,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signInWithPopup(auth, provider);
   };
 
-  const loginWithCredentials = async (u: string, p: string) => {
-    if (u === 'admin' && p === 'admin') {
-      const cred = await signInAnonymously(auth);
-      await updateProfile(cred.user, { displayName: 'Administrador' });
-      toast.success('Bem-vindo, Administrador!');
-    } else {
-      throw new Error('Credenciais inválidas');
-    }
+  const loginWithEmail = async (email: string, password: string) => {
+    await signInWithEmailAndPassword(auth, email, password);
+  };
+
+  const registerWithEmail = async (email: string, password: string, name: string) => {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(cred.user, { displayName: name });
+  };
+
+  const resetPassword = async (email: string) => {
+    await sendPasswordResetEmail(auth, email);
   };
 
   const logout = async () => {
@@ -45,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, loginWithCredentials, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithEmail, registerWithEmail, resetPassword, logout }}>
       {children}
     </AuthContext.Provider>
   );

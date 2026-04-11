@@ -1,8 +1,6 @@
-import { useState, useEffect } from 'react';
-import { AuthProvider } from './contexts/AuthContext';
+import { useState } from 'react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Toaster } from './components/ui/sonner';
-import { signInAnonymously } from 'firebase/auth';
-import { auth } from './firebase';
 import { 
   LayoutDashboard, 
   Building2, 
@@ -29,21 +27,22 @@ import Contracts from './components/Contracts';
 import Receipts from './components/Receipts';
 import Movements from './components/Movements';
 import Settings from './components/Settings';
+import Login from './components/Login';
 
 function AppContent() {
+  const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    signInAnonymously(auth).then(() => setReady(true)).catch(() => setReady(true));
-  }, []);
-
-  if (!ready) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-neutral-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
+  }
+
+  if (!user) {
+    return <Login />;
   }
 
   const navItems = [
