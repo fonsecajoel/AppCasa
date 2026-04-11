@@ -84,6 +84,10 @@ export interface Payment {
   dueDate: string;
   day?: number;
   month?: string;
+  frequency?: 'Anual' | 'Semestral' | 'Trimestral' | 'Mensal' | 'Único';
+  nextDueDate?: string;
+  attachmentUrl?: string;
+  attachmentName?: string;
   status: 'Pending' | 'Paid' | 'Late';
   description?: string;
   ownerId: string;
@@ -95,11 +99,16 @@ export interface Receipt {
   propertyId: string;
   unitId: string;
   tenantId: string;
-  type: 'Renda' | 'Despesa' | 'Caução';
+  type: 'Renda' | 'Despesa' | 'Caução' | 'Outro';
   amount: number;
   dueDate: string;
   status: 'Emitido' | 'Por Emitir' | 'Anulado';
   month: string;
+  category?: string;
+  method?: 'Fatura' | 'Contagem Manual' | 'Valor Fixo';
+  previousReading?: number;
+  currentReading?: number;
+  pricePerUnit?: number;
   ownerId: string;
   createdAt: string;
 }
@@ -111,6 +120,7 @@ export interface LandlordExpense {
   amount: number;
   frequency: 'Anual' | 'Semestral' | 'Trimestral' | 'Mensal' | 'Único';
   dueDate: string;
+  nextDueDate?: string;
   status: 'Pending' | 'Paid' | 'Late';
   description?: string;
   ownerId: string;
