@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -49,7 +48,6 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 export default function Receipts() {
-  const { user } = useAuth();
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -74,11 +72,10 @@ export default function Receipts() {
   });
 
   useEffect(() => {
-    if (!user) return;
-    const qReceipts = query(collection(db, 'receipts'), where('ownerId', '==', user.uid));
-    const qProps = query(collection(db, 'properties'), where('ownerId', '==', user.uid));
-    const qUnits = query(collection(db, 'units'), where('ownerId', '==', user.uid));
-    const qTenants = query(collection(db, 'tenants'), where('ownerId', '==', user.uid));
+    const qReceipts = collection(db, 'receipts');
+    const qProps = collection(db, 'properties');
+    const qUnits = collection(db, 'units');
+    const qTenants = collection(db, 'tenants');
 
     const unsubReceipts = onSnapshot(qReceipts, (s) => setReceipts(s.docs.map(d => ({ id: d.id, ...d.data() } as Receipt))), (e) => handleFirestoreError(e, OperationType.LIST, 'receipts'));
     const unsubProps = onSnapshot(qProps, (s) => setProperties(s.docs.map(d => ({ id: d.id, ...d.data() } as Property))), (e) => handleFirestoreError(e, OperationType.LIST, 'properties'));
@@ -88,10 +85,9 @@ export default function Receipts() {
     return () => {
       unsubReceipts(); unsubProps(); unsubUnits(); unsubTenants();
     };
-  }, [user]);
+  }, []);
 
   const handleSaveReceipt = async () => {
-    if (!user) return;
     try {
       if (editingReceipt) {
         await updateDoc(doc(db, 'receipts', editingReceipt.id), { ...newReceipt });
@@ -99,7 +95,6 @@ export default function Receipts() {
       } else {
         await addDoc(collection(db, 'receipts'), {
           ...newReceipt,
-          ownerId: user.uid,
           createdAt: new Date().toISOString()
         });
         toast.success('Recibo criado!');

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -52,7 +51,6 @@ import { toast } from 'sonner';
 import { format, addMonths, addYears } from 'date-fns';
 
 export default function Financials() {
-  const { user } = useAuth();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -90,26 +88,18 @@ export default function Financials() {
   });
 
   useEffect(() => {
-    if (!user) return;
-    const qPayments = query(collection(db, 'payments'), where('ownerId', '==', user.uid));
-    const qProps = query(collection(db, 'properties'), where('ownerId', '==', user.uid));
-    const qUnits = query(collection(db, 'units'), where('ownerId', '==', user.uid));
-    const qTenants = query(collection(db, 'tenants'), where('ownerId', '==', user.uid));
-    const qCharges = query(collection(db, 'landlordExpenses'), where('ownerId', '==', user.uid));
-
-    const unsubPayments = onSnapshot(qPayments, (s) => setPayments(s.docs.map(d => ({ id: d.id, ...d.data() } as Payment))), (e) => handleFirestoreError(e, OperationType.LIST, 'payments'));
-    const unsubProps = onSnapshot(qProps, (s) => setProperties(s.docs.map(d => ({ id: d.id, ...d.data() } as Property))), (e) => handleFirestoreError(e, OperationType.LIST, 'properties'));
-    const unsubUnits = onSnapshot(qUnits, (s) => setUnits(s.docs.map(d => ({ id: d.id, ...d.data() } as Unit))), (e) => handleFirestoreError(e, OperationType.LIST, 'units'));
-    const unsubTenants = onSnapshot(qTenants, (s) => setTenants(s.docs.map(d => ({ id: d.id, ...d.data() } as Tenant))), (e) => handleFirestoreError(e, OperationType.LIST, 'tenants'));
-    const unsubCharges = onSnapshot(qCharges, (s) => setCharges(s.docs.map(d => ({ id: d.id, ...d.data() } as LandlordCharge))), (e) => handleFirestoreError(e, OperationType.LIST, 'landlordExpenses'));
+    const unsubPayments = onSnapshot(collection(db, 'payments'), (s) => setPayments(s.docs.map(d => ({ id: d.id, ...d.data() } as Payment))), (e) => handleFirestoreError(e, OperationType.LIST, 'payments'));
+    const unsubProps = onSnapshot(collection(db, 'properties'), (s) => setProperties(s.docs.map(d => ({ id: d.id, ...d.data() } as Property))), (e) => handleFirestoreError(e, OperationType.LIST, 'properties'));
+    const unsubUnits = onSnapshot(collection(db, 'units'), (s) => setUnits(s.docs.map(d => ({ id: d.id, ...d.data() } as Unit))), (e) => handleFirestoreError(e, OperationType.LIST, 'units'));
+    const unsubTenants = onSnapshot(collection(db, 'tenants'), (s) => setTenants(s.docs.map(d => ({ id: d.id, ...d.data() } as Tenant))), (e) => handleFirestoreError(e, OperationType.LIST, 'tenants'));
+    const unsubCharges = onSnapshot(collection(db, 'landlordExpenses'), (s) => setCharges(s.docs.map(d => ({ id: d.id, ...d.data() } as LandlordCharge))), (e) => handleFirestoreError(e, OperationType.LIST, 'landlordExpenses'));
 
     return () => {
       unsubPayments(); unsubProps(); unsubUnits(); unsubTenants(); unsubCharges();
     };
-  }, [user]);
+  }, []);
 
   const handleSavePayment = async () => {
-    if (!user) return;
     try {
       if (editingPayment) {
         await updateDoc(doc(db, 'payments', editingPayment.id), { ...newPayment });
@@ -117,7 +107,6 @@ export default function Financials() {
       } else {
         await addDoc(collection(db, 'payments'), {
           ...newPayment,
-          ownerId: user.uid,
           createdAt: new Date().toISOString()
         });
         toast.success('Pagamento registado!');

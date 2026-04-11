@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { collection, query, where, onSnapshot, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, doc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -29,7 +28,6 @@ import { MaintenanceTicket, Property } from '../types';
 import { toast } from 'sonner';
 
 export default function Maintenance() {
-  const { user } = useAuth();
   const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
 
@@ -42,15 +40,11 @@ export default function Maintenance() {
   });
 
   useEffect(() => {
-    if (!user) return;
-    const qTickets = query(collection(db, 'maintenanceTickets'), where('ownerId', '==', user.uid));
-    const qProperties = query(collection(db, 'properties'), where('ownerId', '==', user.uid));
-
-    const unsubTickets = onSnapshot(qTickets, (snapshot) => {
+    const unsubTickets = onSnapshot(collection(db, 'maintenanceTickets'), (snapshot) => {
       setTickets(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MaintenanceTicket)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'maintenanceTickets'));
 
-    const unsubProperties = onSnapshot(qProperties, (snapshot) => {
+    const unsubProperties = onSnapshot(collection(db, 'properties'), (snapshot) => {
       setProperties(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'properties'));
 
@@ -58,17 +52,16 @@ export default function Maintenance() {
       unsubTickets();
       unsubProperties();
     };
-  }, [user]);
+  }, []);
 
   const handleSaveTicket = async () => {
-    if (!user || !newTicket.propertyId || !newTicket.description) {
+    if (!newTicket.propertyId || !newTicket.description) {
       toast.error('Preencha todos os campos obrigatórios.');
       return;
     }
     try {
       await addDoc(collection(db, 'maintenanceTickets'), {
         ...newTicket,
-        ownerId: user.uid,
         createdAt: new Date().toISOString()
       });
       toast.success('Ticket de manutenção criado!');

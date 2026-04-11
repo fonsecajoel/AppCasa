@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
-import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
@@ -22,22 +21,20 @@ import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
 
 export default function AIAssistant() {
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [properties, setProperties] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!user) return;
     const fetchData = async () => {
-      const pSnap = await getDocs(query(collection(db, 'properties'), where('ownerId', '==', user.uid)));
-      const tSnap = await getDocs(query(collection(db, 'tenants'), where('ownerId', '==', user.uid)));
+      const pSnap = await getDocs(collection(db, 'properties'));
+      const tSnap = await getDocs(collection(db, 'tenants'));
       setProperties(pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setTenants(tSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     };
     fetchData();
-  }, [user]);
+  }, []);
 
   const handleGenerateAd = async () => {
     if (properties.length === 0) {
@@ -59,8 +56,8 @@ export default function AIAssistant() {
     setLoading(true);
     try {
       // Fetch some mock/real data for the report
-      const paySnap = await getDocs(query(collection(db, 'payments'), where('ownerId', '==', user?.uid)));
-      const expSnap = await getDocs(query(collection(db, 'expenses'), where('ownerId', '==', user?.uid)));
+      const paySnap = await getDocs(collection(db, 'payments'));
+      const expSnap = await getDocs(collection(db, 'expenses'));
       
       const res = await generateMonthlyReport({
         properties,

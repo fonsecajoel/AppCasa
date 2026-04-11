@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -49,7 +48,6 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 export default function LandlordExpenses() {
-  const { user } = useAuth();
   const [expenses, setExpenses] = useState<LandlordExpense[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -66,20 +64,15 @@ export default function LandlordExpenses() {
   });
 
   useEffect(() => {
-    if (!user) return;
-    const qExpenses = query(collection(db, 'landlordExpenses'), where('ownerId', '==', user.uid));
-    const qProps = query(collection(db, 'properties'), where('ownerId', '==', user.uid));
-
-    const unsubExpenses = onSnapshot(qExpenses, (s) => setExpenses(s.docs.map(d => ({ id: d.id, ...d.data() } as LandlordExpense))), (e) => handleFirestoreError(e, OperationType.LIST, 'landlordExpenses'));
-    const unsubProps = onSnapshot(qProps, (s) => setProperties(s.docs.map(d => ({ id: d.id, ...d.data() } as Property))), (e) => handleFirestoreError(e, OperationType.LIST, 'properties'));
+    const unsubExpenses = onSnapshot(collection(db, 'landlordExpenses'), (s) => setExpenses(s.docs.map(d => ({ id: d.id, ...d.data() } as LandlordExpense))), (e) => handleFirestoreError(e, OperationType.LIST, 'landlordExpenses'));
+    const unsubProps = onSnapshot(collection(db, 'properties'), (s) => setProperties(s.docs.map(d => ({ id: d.id, ...d.data() } as Property))), (e) => handleFirestoreError(e, OperationType.LIST, 'properties'));
 
     return () => {
       unsubExpenses(); unsubProps();
     };
-  }, [user]);
+  }, []);
 
   const handleSaveExpense = async () => {
-    if (!user) return;
     try {
       if (editingExpense) {
         await updateDoc(doc(db, 'landlordExpenses', editingExpense.id), { ...newExpense });
@@ -87,7 +80,6 @@ export default function LandlordExpenses() {
       } else {
         await addDoc(collection(db, 'landlordExpenses'), {
           ...newExpense,
-          ownerId: user.uid,
           createdAt: new Date().toISOString()
         });
         toast.success('Encargo registado!');

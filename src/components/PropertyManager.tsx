@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -63,7 +62,6 @@ const emptyAddress: Address = {
 };
 
 export default function PropertyManager() {
-  const { user } = useAuth();
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [charges, setCharges] = useState<LandlordCharge[]>([]);
@@ -83,24 +81,17 @@ export default function PropertyManager() {
   const [propertyCharges, setPropertyCharges] = useState<Partial<LandlordCharge>[]>([]);
 
   useEffect(() => {
-    if (!user) return;
-    const qProps = query(collection(db, 'properties'), where('ownerId', '==', user.uid));
-    const qUnits = query(collection(db, 'units'), where('ownerId', '==', user.uid));
-    const qCharges = query(collection(db, 'landlordExpenses'), where('ownerId', '==', user.uid));
-    const qContracts = query(collection(db, 'contracts'), where('ownerId', '==', user.uid));
-
-    const unsubProps = onSnapshot(qProps, (s) => setProperties(s.docs.map(d => ({ id: d.id, ...d.data() } as Property))), (e) => handleFirestoreError(e, OperationType.LIST, 'properties'));
-    const unsubUnits = onSnapshot(qUnits, (s) => setUnits(s.docs.map(d => ({ id: d.id, ...d.data() } as Unit))), (e) => handleFirestoreError(e, OperationType.LIST, 'units'));
-    const unsubCharges = onSnapshot(qCharges, (s) => setCharges(s.docs.map(d => ({ id: d.id, ...d.data() } as LandlordCharge))), (e) => handleFirestoreError(e, OperationType.LIST, 'landlordExpenses'));
-    const unsubContracts = onSnapshot(qContracts, (s) => setContracts(s.docs.map(d => ({ id: d.id, ...d.data() } as Contract))), (e) => handleFirestoreError(e, OperationType.LIST, 'contracts'));
+    const unsubProps = onSnapshot(collection(db, 'properties'), (s) => setProperties(s.docs.map(d => ({ id: d.id, ...d.data() } as Property))), (e) => handleFirestoreError(e, OperationType.LIST, 'properties'));
+    const unsubUnits = onSnapshot(collection(db, 'units'), (s) => setUnits(s.docs.map(d => ({ id: d.id, ...d.data() } as Unit))), (e) => handleFirestoreError(e, OperationType.LIST, 'units'));
+    const unsubCharges = onSnapshot(collection(db, 'landlordExpenses'), (s) => setCharges(s.docs.map(d => ({ id: d.id, ...d.data() } as LandlordCharge))), (e) => handleFirestoreError(e, OperationType.LIST, 'landlordExpenses'));
+    const unsubContracts = onSnapshot(collection(db, 'contracts'), (s) => setContracts(s.docs.map(d => ({ id: d.id, ...d.data() } as Contract))), (e) => handleFirestoreError(e, OperationType.LIST, 'contracts'));
 
     return () => {
       unsubProps(); unsubUnits(); unsubCharges(); unsubContracts();
     };
-  }, [user]);
+  }, []);
 
   const handleSaveProperty = async () => {
-    if (!user) return;
     try {
       const batch = writeBatch(db);
       let propertyId = editingProperty?.id;
@@ -113,7 +104,6 @@ export default function PropertyManager() {
         propertyId = propRef.id;
         batch.set(propRef, {
           ...newProperty,
-          ownerId: user.uid,
           createdAt: new Date().toISOString(),
         });
       }
@@ -127,7 +117,6 @@ export default function PropertyManager() {
           batch.set(unitRef, {
             ...u,
             propertyId,
-            ownerId: user.uid,
             createdAt: new Date().toISOString(),
           });
         }
@@ -140,7 +129,6 @@ export default function PropertyManager() {
           batch.set(chargeRef, {
             ...c,
             propertyId,
-            ownerId: user.uid,
             createdAt: new Date().toISOString(),
           });
         }

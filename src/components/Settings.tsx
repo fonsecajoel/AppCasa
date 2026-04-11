@@ -1,4 +1,3 @@
-import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -18,8 +17,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 export default function Settings() {
-  const { user, logout } = useAuth();
-
   const sections = [
     { id: 'profile', label: 'Perfil do Utilizador', icon: User, description: 'Gerir informações pessoais e avatar.' },
     { id: 'notifications', label: 'Notificações', icon: Bell, description: 'Configurar alertas de rendas e despesas.' },
@@ -41,19 +38,19 @@ export default function Settings() {
             <CardContent className="p-8 text-center">
               <div className="relative inline-block mb-4">
                 <Avatar className="h-24 w-24 border-4 border-neutral-50 shadow-sm">
-                  <AvatarImage src={user?.photoURL || ''} />
+                  <AvatarImage src={''} />
                   <AvatarFallback className="text-2xl font-bold bg-blue-50 text-blue-600">
-                    {user?.displayName?.charAt(0)}
+                    {''}
                   </AvatarFallback>
                 </Avatar>
                 <Button size="icon" variant="secondary" className="absolute bottom-0 right-0 rounded-full h-8 w-8 shadow-md bg-white hover:bg-neutral-50 border border-neutral-100">
                   <Camera size={14} className="text-[#1E293B]" />
                 </Button>
               </div>
-              <h3 className="text-xl font-bold text-[#1E293B]">{user?.displayName}</h3>
-              <p className="text-sm text-neutral-500 mb-6">{user?.email}</p>
+              <h3 className="text-xl font-bold text-[#1E293B]"></h3>
+              <p className="text-sm text-neutral-500 mb-6"></p>
               <Badge className="bg-blue-50 text-blue-600 border-none rounded-md px-3 py-1 text-[10px] font-bold uppercase tracking-wider mb-6">PLANO PREMIUM</Badge>
-              <Button variant="outline" className="w-full rounded-xl border-neutral-200 text-neutral-600 hover:bg-neutral-50" onClick={logout}>
+              <Button variant="outline" className="w-full rounded-xl border-neutral-200 text-neutral-600 hover:bg-neutral-50">
                 <LogOut size={16} className="mr-2" />
                 Terminar Sessão
               </Button>

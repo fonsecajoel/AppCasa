@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -48,7 +47,6 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 export default function Movements() {
-  const { user } = useAuth();
   const [movements, setMovements] = useState<Movement[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -66,10 +64,9 @@ export default function Movements() {
   });
 
   useEffect(() => {
-    if (!user) return;
-    const qMovements = query(collection(db, 'movements'), where('ownerId', '==', user.uid));
-    const qProps = query(collection(db, 'properties'), where('ownerId', '==', user.uid));
-    const qUnits = query(collection(db, 'units'), where('ownerId', '==', user.uid));
+    const qMovements = collection(db, 'movements');
+    const qProps = collection(db, 'properties');
+    const qUnits = collection(db, 'units');
 
     const unsubMovements = onSnapshot(qMovements, (s) => setMovements(s.docs.map(d => ({ id: d.id, ...d.data() } as Movement))), (e) => handleFirestoreError(e, OperationType.LIST, 'movements'));
     const unsubProps = onSnapshot(qProps, (s) => setProperties(s.docs.map(d => ({ id: d.id, ...d.data() } as Property))), (e) => handleFirestoreError(e, OperationType.LIST, 'properties'));
@@ -78,10 +75,9 @@ export default function Movements() {
     return () => {
       unsubMovements(); unsubProps(); unsubUnits();
     };
-  }, [user]);
+  }, []);
 
   const handleSaveMovement = async () => {
-    if (!user) return;
     try {
       if (editingMovement) {
         await updateDoc(doc(db, 'movements', editingMovement.id), { ...newMovement });
@@ -89,7 +85,6 @@ export default function Movements() {
       } else {
         await addDoc(collection(db, 'movements'), {
           ...newMovement,
-          ownerId: user.uid,
           createdAt: new Date().toISOString()
         });
         toast.success('Movimento registado!');
