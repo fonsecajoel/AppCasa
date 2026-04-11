@@ -43,11 +43,13 @@ import {
   CreditCard,
   AlertCircle,
   CheckCircle2,
-  Clock
+  Clock,
+  Upload,
+  Paperclip
 } from 'lucide-react';
-import { Payment, Property, Unit, Tenant } from '../types';
+import { Payment, Property, Unit, Tenant, LandlordCharge } from '../types';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, addMonths, addYears } from 'date-fns';
 
 export default function Financials() {
   const { user } = useAuth();
@@ -55,8 +57,23 @@ export default function Financials() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [charges, setCharges] = useState<LandlordCharge[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  
+  const calculateNextDueDate = (fromDate: string, frequency: string): string => {
+    if (!fromDate) return '';
+    const date = new Date(fromDate);
+    switch (frequency) {
+      case 'Mensal': return format(addMonths(date, 1), 'yyyy-MM-dd');
+      case 'Trimestral': return format(addMonths(date, 3), 'yyyy-MM-dd');
+      case 'Semestral': return format(addMonths(date, 6), 'yyyy-MM-dd');
+      case 'Anual': return format(addYears(date, 1), 'yyyy-MM-dd');
+      case 'Único': return fromDate;
+      default: return '';
+    }
+  };
   
   const [newPayment, setNewPayment] = useState<Partial<Payment>>({
     propertyId: '',
@@ -78,14 +95,16 @@ export default function Financials() {
     const qProps = query(collection(db, 'properties'), where('ownerId', '==', user.uid));
     const qUnits = query(collection(db, 'units'), where('ownerId', '==', user.uid));
     const qTenants = query(collection(db, 'tenants'), where('ownerId', '==', user.uid));
+    const qCharges = query(collection(db, 'landlordExpenses'), where('ownerId', '==', user.uid));
 
     const unsubPayments = onSnapshot(qPayments, (s) => setPayments(s.docs.map(d => ({ id: d.id, ...d.data() } as Payment))), (e) => handleFirestoreError(e, OperationType.LIST, 'payments'));
     const unsubProps = onSnapshot(qProps, (s) => setProperties(s.docs.map(d => ({ id: d.id, ...d.data() } as Property))), (e) => handleFirestoreError(e, OperationType.LIST, 'properties'));
     const unsubUnits = onSnapshot(qUnits, (s) => setUnits(s.docs.map(d => ({ id: d.id, ...d.data() } as Unit))), (e) => handleFirestoreError(e, OperationType.LIST, 'units'));
     const unsubTenants = onSnapshot(qTenants, (s) => setTenants(s.docs.map(d => ({ id: d.id, ...d.data() } as Tenant))), (e) => handleFirestoreError(e, OperationType.LIST, 'tenants'));
+    const unsubCharges = onSnapshot(qCharges, (s) => setCharges(s.docs.map(d => ({ id: d.id, ...d.data() } as LandlordCharge))), (e) => handleFirestoreError(e, OperationType.LIST, 'landlordExpenses'));
 
     return () => {
-      unsubPayments(); unsubProps(); unsubUnits(); unsubTenants();
+      unsubPayments(); unsubProps(); unsubUnits(); unsubTenants(); unsubCharges();
     };
   }, [user]);
 
@@ -121,10 +140,13 @@ export default function Financials() {
       dueDate: format(new Date(), 'yyyy-MM-dd'),
       day: new Date().getDate(),
       month: format(new Date(), 'MMMM'),
+      frequency: undefined,
+      nextDueDate: '',
       status: 'Pending',
       description: '',
     });
     setEditingPayment(null);
+    setAttachmentFile(null);
   };
 
   const handleDeletePayment = async (id: string) => {
@@ -163,52 +185,53 @@ export default function Financials() {
               <DialogTitle>{editingPayment ? 'Editar Pagamento' : 'Registar Novo Pagamento'}</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label>Imóvel</Label>
-                  <Select value={newPayment.propertyId || ''} onValueChange={v => setNewPayment({...newPayment, propertyId: v, unitId: ''})}>
-                    <SelectTrigger><SelectValue placeholder="Selecionar Imóvel" /></SelectTrigger>
-                    <SelectContent>
-                      {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label>Unidade</Label>
-                  <Select value={newPayment.unitId || ''} onValueChange={v => setNewPayment({...newPayment, unitId: v})}>
-                    <SelectTrigger><SelectValue placeholder="Selecionar Unidade" /></SelectTrigger>
-                    <SelectContent>
-                      {units.filter(u => u.propertyId === newPayment.propertyId).map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              {/* Tipo - Always first */}
               <div className="grid gap-2">
-                <Label>Inquilino</Label>
-                <Select value={newPayment.tenantId || ''} onValueChange={v => setNewPayment({...newPayment, tenantId: v})}>
-                  <SelectTrigger><SelectValue placeholder="Selecionar Inquilino" /></SelectTrigger>
+                <Label>Tipo</Label>
+                <Select value={newPayment.type || 'Renda'} onValueChange={(v: any) => setNewPayment({...newPayment, type: v, category: '', tenantId: '', frequency: undefined, nextDueDate: ''})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {tenants.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                    <SelectItem value="Renda">Renda</SelectItem>
+                    <SelectItem value="Despesa">Despesa (Inquilino)</SelectItem>
+                    <SelectItem value="Encargo">Encargo (Senhorio)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label>Tipo</Label>
-                  <Select value={newPayment.type || 'Renda'} onValueChange={(v: any) => setNewPayment({...newPayment, type: v, category: ''})}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Renda">Renda</SelectItem>
-                      <SelectItem value="Despesa">Despesa (Inquilino)</SelectItem>
-                      <SelectItem value="Encargo">Encargo (Senhorio)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label>Valor (€)</Label>
-                  <Input type="number" value={newPayment.amount ?? 0} onChange={e => setNewPayment({...newPayment, amount: parseFloat(e.target.value) || 0})} />
-                </div>
-              </div>
+
+              {/* Renda / Despesa fields: Imóvel, Unidade, Inquilino */}
+              {(newPayment.type === 'Renda' || newPayment.type === 'Despesa') && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label>Imóvel</Label>
+                      <Select value={newPayment.propertyId || ''} onValueChange={v => setNewPayment({...newPayment, propertyId: v, unitId: ''})}>
+                        <SelectTrigger><SelectValue placeholder="Selecionar Imóvel" /></SelectTrigger>
+                        <SelectContent>
+                          {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Unidade</Label>
+                      <Select value={newPayment.unitId || ''} onValueChange={v => setNewPayment({...newPayment, unitId: v})}>
+                        <SelectTrigger><SelectValue placeholder="Selecionar Unidade" /></SelectTrigger>
+                        <SelectContent>
+                          {units.filter(u => u.propertyId === newPayment.propertyId).map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Inquilino</Label>
+                    <Select value={newPayment.tenantId || ''} onValueChange={v => setNewPayment({...newPayment, tenantId: v})}>
+                      <SelectTrigger><SelectValue placeholder="Selecionar Inquilino" /></SelectTrigger>
+                      <SelectContent>
+                        {tenants.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
 
               {newPayment.type === 'Despesa' && (
                 <div className="grid gap-2">
@@ -227,8 +250,29 @@ export default function Financials() {
                 </div>
               )}
 
+              {/* Encargo fields: Imóvel, Unidade, Encargo tipo, Frequência, Próxima Data */}
               {newPayment.type === 'Encargo' && (
                 <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label>Imóvel</Label>
+                      <Select value={newPayment.propertyId || ''} onValueChange={v => setNewPayment({...newPayment, propertyId: v, unitId: ''})}>
+                        <SelectTrigger><SelectValue placeholder="Selecionar Imóvel" /></SelectTrigger>
+                        <SelectContent>
+                          {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Unidade</Label>
+                      <Select value={newPayment.unitId || ''} onValueChange={v => setNewPayment({...newPayment, unitId: v})}>
+                        <SelectTrigger><SelectValue placeholder="Selecionar Unidade" /></SelectTrigger>
+                        <SelectContent>
+                          {units.filter(u => u.propertyId === newPayment.propertyId).map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                   <div className="grid gap-2">
                     <Label>Qual é o Encargo?</Label>
                     <Select value={newPayment.category || ''} onValueChange={v => setNewPayment({...newPayment, category: v})}>
@@ -246,38 +290,61 @@ export default function Financials() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                      <Label>Dia do Pagamento</Label>
-                      <Input type="number" min="1" max="31" value={newPayment.day ?? ''} onChange={e => setNewPayment({...newPayment, day: parseInt(e.target.value) || 1})} />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label>Mês do Pagamento</Label>
-                      <Select value={newPayment.month || ''} onValueChange={v => setNewPayment({...newPayment, month: v})}>
-                        <SelectTrigger><SelectValue placeholder="Selecionar Mês" /></SelectTrigger>
+                      <Label>Frequência</Label>
+                      <Select value={newPayment.frequency || ''} onValueChange={(v: any) => {
+                        const nextDate = newPayment.nextDueDate ? calculateNextDueDate(newPayment.nextDueDate, v) : '';
+                        setNewPayment({...newPayment, frequency: v});
+                      }}>
+                        <SelectTrigger><SelectValue placeholder="Selecionar Frequência" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Janeiro">Janeiro</SelectItem>
-                          <SelectItem value="Fevereiro">Fevereiro</SelectItem>
-                          <SelectItem value="Março">Março</SelectItem>
-                          <SelectItem value="Abril">Abril</SelectItem>
-                          <SelectItem value="Maio">Maio</SelectItem>
-                          <SelectItem value="Junho">Junho</SelectItem>
-                          <SelectItem value="Julho">Julho</SelectItem>
-                          <SelectItem value="Agosto">Agosto</SelectItem>
-                          <SelectItem value="Setembro">Setembro</SelectItem>
-                          <SelectItem value="Outubro">Outubro</SelectItem>
-                          <SelectItem value="Novembro">Novembro</SelectItem>
-                          <SelectItem value="Dezembro">Dezembro</SelectItem>
+                          <SelectItem value="Anual">Anual</SelectItem>
+                          <SelectItem value="Semestral">Semestral</SelectItem>
+                          <SelectItem value="Trimestral">Trimestral</SelectItem>
+                          <SelectItem value="Mensal">Mensal</SelectItem>
+                          <SelectItem value="Único">Único</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="grid gap-2">
+                      <Label>Próxima Data de Pagamento</Label>
+                      <Input type="date" value={newPayment.nextDueDate || ''} onChange={e => setNewPayment({...newPayment, nextDueDate: e.target.value, dueDate: e.target.value})} />
+                    </div>
                   </div>
+                  {newPayment.nextDueDate && newPayment.frequency && newPayment.frequency !== 'Único' && (
+                    <div className="text-xs text-blue-600 bg-blue-50 rounded-xl px-3 py-2">
+                      Próximo pagamento após este: <strong>{calculateNextDueDate(newPayment.nextDueDate, newPayment.frequency)}</strong>
+                    </div>
+                  )}
                 </>
               )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label>Data de Vencimento</Label>
-                  <Input type="date" value={newPayment.dueDate || ''} onChange={e => setNewPayment({...newPayment, dueDate: e.target.value})} />
+                  <Label>Valor (€)</Label>
+                  <Input type="number" value={newPayment.amount ?? 0} onChange={e => setNewPayment({...newPayment, amount: parseFloat(e.target.value) || 0})} />
                 </div>
+                {newPayment.type !== 'Encargo' && (
+                  <div className="grid gap-2">
+                    <Label>Data de Vencimento</Label>
+                    <Input type="date" value={newPayment.dueDate || ''} onChange={e => setNewPayment({...newPayment, dueDate: e.target.value})} />
+                  </div>
+                )}
+                {newPayment.type === 'Encargo' && (
+                  <div className="grid gap-2">
+                    <Label>Estado</Label>
+                    <Select value={newPayment.status || 'Pending'} onValueChange={(v: any) => setNewPayment({...newPayment, status: v})}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Pending">Pendente</SelectItem>
+                        <SelectItem value="Paid">Pago</SelectItem>
+                        <SelectItem value="Late">Atrasado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+
+              {newPayment.type !== 'Encargo' && (
                 <div className="grid gap-2">
                   <Label>Estado</Label>
                   <Select value={newPayment.status || 'Pending'} onValueChange={(v: any) => setNewPayment({...newPayment, status: v})}>
@@ -289,10 +356,39 @@ export default function Financials() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
+              )}
+
               <div className="grid gap-2">
                 <Label>Descrição / Observações</Label>
                 <Input value={newPayment.description || ''} onChange={e => setNewPayment({...newPayment, description: e.target.value})} />
+              </div>
+
+              {/* File upload */}
+              <div className="grid gap-2">
+                <Label>Comprovativo (Ficheiro)</Label>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-neutral-200 rounded-xl cursor-pointer hover:border-neutral-400 hover:bg-neutral-50 transition-colors text-sm text-neutral-500">
+                    <Upload size={16} />
+                    {attachmentFile ? attachmentFile.name : 'Selecionar ficheiro'}
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      accept="image/*,.pdf,.doc,.docx"
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setAttachmentFile(file);
+                          setNewPayment({...newPayment, attachmentName: file.name});
+                        }
+                      }} 
+                    />
+                  </label>
+                  {attachmentFile && (
+                    <Button variant="ghost" size="sm" onClick={() => { setAttachmentFile(null); setNewPayment({...newPayment, attachmentName: '', attachmentUrl: ''}); }} className="text-rose-500 text-xs">
+                      Remover
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
             <DialogFooter>

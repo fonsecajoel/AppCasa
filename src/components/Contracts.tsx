@@ -225,7 +225,7 @@ export default function Contracts() {
                     <Input type="number" value={newContract.rentAmount ?? 0} onChange={e => setNewContract({...newContract, rentAmount: parseFloat(e.target.value) || 0})} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Dia de Pagamento</Label>
+                    <Label>Data de Vencimento</Label>
                     <Input type="number" min="1" max="31" value={newContract.paymentDay ?? 1} onChange={e => setNewContract({...newContract, paymentDay: parseInt(e.target.value) || 1})} />
                   </div>
                   <div className="grid gap-2">

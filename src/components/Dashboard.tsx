@@ -229,7 +229,7 @@ export default function Dashboard({ onNavigate }: { onNavigate?: (tab: string) =
                 <p className="text-xl font-bold text-emerald-400">{currentMonthIncome.toLocaleString('pt-PT', { minimumFractionDigits: 2 })} €</p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase mb-1">DESPESAS</p>
+                <p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase mb-1">SAÍDAS</p>
                 <p className="text-xl font-bold text-rose-400">{totalMonthlyExpenses.toLocaleString('pt-PT', { minimumFractionDigits: 2 })} €</p>
               </div>
             </div>

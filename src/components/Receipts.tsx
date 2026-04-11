@@ -66,6 +66,11 @@ export default function Receipts() {
     dueDate: format(new Date(), 'yyyy-MM-dd'),
     status: 'Por Emitir',
     month: format(new Date(), 'MMMM yyyy'),
+    category: '',
+    method: undefined,
+    previousReading: 0,
+    currentReading: 0,
+    pricePerUnit: 0,
   });
 
   useEffect(() => {
@@ -116,6 +121,11 @@ export default function Receipts() {
       dueDate: format(new Date(), 'yyyy-MM-dd'),
       status: 'Por Emitir',
       month: format(new Date(), 'MMMM yyyy'),
+      category: '',
+      method: undefined,
+      previousReading: 0,
+      currentReading: 0,
+      pricePerUnit: 0,
     });
     setEditingReceipt(null);
   };
@@ -188,12 +198,13 @@ export default function Receipts() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label>Tipo</Label>
-                  <Select value={newReceipt.type || 'Renda'} onValueChange={(v: any) => setNewReceipt({...newReceipt, type: v})}>
+                  <Select value={newReceipt.type || 'Renda'} onValueChange={(v: any) => setNewReceipt({...newReceipt, type: v, category: '', method: undefined})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Renda">Renda</SelectItem>
                       <SelectItem value="Despesa">Despesa</SelectItem>
                       <SelectItem value="Caução">Caução</SelectItem>
+                      <SelectItem value="Outro">Outro</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -202,6 +213,99 @@ export default function Receipts() {
                   <Input value={newReceipt.month || ''} onChange={e => setNewReceipt({...newReceipt, month: e.target.value})} placeholder="Ex: Abril 2026" />
                 </div>
               </div>
+              
+              {newReceipt.type === 'Despesa' && (
+                <div className="grid gap-2">
+                  <Label>Qual é a Despesa?</Label>
+                  <Select value={newReceipt.category || ''} onValueChange={v => setNewReceipt({...newReceipt, category: v, method: (v === 'Água' || v === 'Eletricidade') ? newReceipt.method : undefined})}>
+                    <SelectTrigger><SelectValue placeholder="Selecionar Despesa" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Água">Água</SelectItem>
+                      <SelectItem value="Eletricidade">Eletricidade</SelectItem>
+                      <SelectItem value="Gás">Gás</SelectItem>
+                      <SelectItem value="Internet">Internet</SelectItem>
+                      <SelectItem value="Limpeza">Limpeza</SelectItem>
+                      <SelectItem value="Outros">Outros</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {newReceipt.type === 'Despesa' && (newReceipt.category === 'Água' || newReceipt.category === 'Eletricidade') && (
+                <div className="grid gap-4 border-l-2 border-blue-100 pl-4 py-2 bg-blue-50/30 rounded-r-xl">
+                  <div className="grid gap-2">
+                    <Label className="text-blue-700 font-bold text-[10px] uppercase tracking-wider">Método de Cobrança</Label>
+                    <Select value={newReceipt.method || 'Fatura'} onValueChange={(v: any) => setNewReceipt({...newReceipt, method: v})}>
+                      <SelectTrigger className="bg-white border-blue-100"><SelectValue placeholder="Selecionar Método" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Fatura">Fatura</SelectItem>
+                        <SelectItem value="Contagem Manual">Contagem Manual</SelectItem>
+                        <SelectItem value="Valor Fixo">Valor Fixo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {newReceipt.method === 'Contagem Manual' && (
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="grid gap-2">
+                        <Label className="text-blue-600 text-[10px] uppercase tracking-wider">Anterior</Label>
+                        <Input 
+                          type="number" 
+                          className="bg-white border-blue-100"
+                          value={newReceipt.previousReading ?? 0} 
+                          onChange={e => {
+                            const prev = parseFloat(e.target.value) || 0;
+                            const curr = newReceipt.currentReading || 0;
+                            const price = newReceipt.pricePerUnit || 0;
+                            setNewReceipt({
+                              ...newReceipt, 
+                              previousReading: prev,
+                              amount: Number((Math.max(0, (curr - prev) * price)).toFixed(2))
+                            });
+                          }} 
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label className="text-blue-600 text-[10px] uppercase tracking-wider">Atual</Label>
+                        <Input 
+                          type="number" 
+                          className="bg-white border-blue-100"
+                          value={newReceipt.currentReading ?? 0} 
+                          onChange={e => {
+                            const curr = parseFloat(e.target.value) || 0;
+                            const prev = newReceipt.previousReading || 0;
+                            const price = newReceipt.pricePerUnit || 0;
+                            setNewReceipt({
+                              ...newReceipt, 
+                              currentReading: curr,
+                              amount: Number((Math.max(0, (curr - prev) * price)).toFixed(2))
+                            });
+                          }} 
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label className="text-blue-600 text-[10px] uppercase tracking-wider">Preço/Unid</Label>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          className="bg-white border-blue-100"
+                          value={newReceipt.pricePerUnit ?? 0} 
+                          onChange={e => {
+                            const price = parseFloat(e.target.value) || 0;
+                            const curr = newReceipt.currentReading || 0;
+                            const prev = newReceipt.previousReading || 0;
+                            setNewReceipt({
+                              ...newReceipt, 
+                              pricePerUnit: price,
+                              amount: Number((Math.max(0, (curr - prev) * price)).toFixed(2))
+                            });
+                          }} 
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label>Valor (€)</Label>
