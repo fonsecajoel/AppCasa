@@ -1,0 +1,243 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e5]:
+      - link "Logótipo ASSUL ASSUL" [ref=e6] [cursor=pointer]:
+        - /url: "#home"
+        - img "Logótipo ASSUL" [ref=e7]
+        - generic [ref=e8]: ASSUL
+      - generic [ref=e9]:
+        - link "Início" [ref=e10] [cursor=pointer]:
+          - /url: "#home"
+        - link "Sobre" [ref=e11] [cursor=pointer]:
+          - /url: "#about"
+        - link "Atividades" [ref=e12] [cursor=pointer]:
+          - /url: "#activities"
+        - link "Galeria" [ref=e13] [cursor=pointer]:
+          - /url: "#gallery"
+        - link "Contacto" [ref=e14] [cursor=pointer]:
+          - /url: "#contact"
+        - link "Reservar" [ref=e15] [cursor=pointer]:
+          - /url: "#booking"
+  - generic [ref=e16]:
+    - img "Bar da ASSUL - Associação Social do Ulmeiro" [ref=e18]
+    - generic [ref=e20]:
+      - img "Logótipo ASSUL" [ref=e21]
+      - generic [ref=e22]:
+        - generic [ref=e23]: Bem-vindo à
+        - heading "ASSUL" [level=1] [ref=e24]
+        - paragraph [ref=e25]: "\"Onde pode beber uma cerveijinha e jogar as cartas com um copo de vinho.\""
+        - generic [ref=e26]:
+          - link "Descobrir Mais" [ref=e27] [cursor=pointer]:
+            - /url: "#about"
+          - link "Alugar Salão" [ref=e28] [cursor=pointer]:
+            - /url: "#booking"
+    - img [ref=e30]
+  - generic [ref=e34]:
+    - generic [ref=e35]:
+      - generic [ref=e36]:
+        - generic [ref=e38]: Sobre a Associação
+        - heading "A Nossa História" [level=2] [ref=e39]
+      - generic [ref=e40]:
+        - paragraph [ref=e41]: A ASSUL (Associação Social do Ulmeiro) é mais do que um espaço físico; é o coração pulsante da nossa comunidade em Ulmeiro. Fundada com o propósito de unir as pessoas, oferecemos um ambiente acolhedor onde a tradição e o convívio se encontram.
+        - paragraph [ref=e42]: Seja para uma partida de cartas, um jogo de bilhar ou simplesmente para partilhar uma cerveja fresca com os amigos, a ASSUL é o ponto de encontro de gerações. Valorizamos a simplicidade, a amizade e o espírito comunitário que nos define.
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - heading "Ulmeiro" [level=4] [ref=e45]
+          - paragraph [ref=e46]: Localização
+        - generic [ref=e47]:
+          - heading "21:00" [level=4] [ref=e48]
+          - paragraph [ref=e49]: Horário de Abertura
+    - img "Decoração com cachecóis desportivos na ASSUL" [ref=e51]
+  - generic [ref=e52]:
+    - img [ref=e55]
+    - generic [ref=e57]:
+      - generic [ref=e58]:
+        - generic [ref=e60]: Atividades e Convívio
+        - heading "O Que Fazemos" [level=2] [ref=e61]
+      - generic [ref=e62]:
+        - generic [ref=e63]:
+          - img [ref=e65]
+          - heading "Bar Social" [level=3] [ref=e69]
+          - paragraph [ref=e70]: Cerveja fresca (Sagres Mini sempre gelada), vinhos da região e petiscos tradicionais.
+        - generic [ref=e71]:
+          - img [ref=e73]
+          - heading "Jogos de Cartas" [level=3] [ref=e78]
+          - paragraph [ref=e79]: Torneios amigáveis de sueca e momentos de lazer entre amigos.
+        - generic [ref=e80]:
+          - img [ref=e82]
+          - heading "Bilhar" [level=3] [ref=e88]
+          - paragraph [ref=e89]: Uma mesa de bilhar profissional num espaço dedicado ao jogo.
+        - generic [ref=e90]:
+          - img [ref=e92]
+          - heading "Eventos" [level=3] [ref=e94]
+          - paragraph [ref=e95]: Festas temáticas, jantares comunitários e celebrações locais.
+  - generic [ref=e98]:
+    - generic [ref=e99]:
+      - generic [ref=e101]: Galeria de Fotos
+      - heading "O Nosso Espaço" [level=2] [ref=e102]
+    - generic [ref=e103]:
+      - generic [ref=e104] [cursor=pointer]:
+        - img "Balcão da ASSUL com logótipo" [ref=e105]
+        - paragraph [ref=e107]: O nosso balcão icónico
+      - generic [ref=e108] [cursor=pointer]:
+        - img "Sala de bilhar da ASSUL" [ref=e109]
+        - paragraph [ref=e111]: Espaço de jogos
+      - generic [ref=e112] [cursor=pointer]:
+        - img "Sagres Mini no balcão" [ref=e113]
+        - paragraph [ref=e115]: Sempre fresca
+      - generic [ref=e116] [cursor=pointer]:
+        - img "Decoração com cachecóis desportivos" [ref=e117]
+        - paragraph [ref=e119]: A nossa paixão pelo desporto
+      - generic [ref=e120] [cursor=pointer]:
+        - img "Parque infantil exterior" [ref=e121]
+        - paragraph [ref=e123]: Espaço para os mais novos
+  - generic [ref=e125]:
+    - img "Sala de convívio da ASSUL" [ref=e127]
+    - generic [ref=e128]:
+      - generic [ref=e129]:
+        - generic [ref=e131]: Comunidade ASSUL
+        - heading "Torne-se Sócio" [level=2] [ref=e132]
+      - generic [ref=e133]:
+        - paragraph [ref=e134]: Ser sócio da ASSUL é fazer parte de uma família. Ao juntar-se a nós, contribui para a manutenção deste espaço histórico e para a dinamização de atividades em Ulmeiro.
+        - generic [ref=e135]:
+          - generic [ref=e136]:
+            - img [ref=e138]
+            - generic [ref=e140]: Descontos exclusivos no bar e eventos
+          - generic [ref=e141]:
+            - img [ref=e143]
+            - generic [ref=e145]: Prioridade no aluguer do salão
+          - generic [ref=e146]:
+            - img [ref=e148]
+            - generic [ref=e150]: Participação em torneios de sócios
+          - generic [ref=e151]:
+            - img [ref=e153]
+            - generic [ref=e155]: Voz ativa nas decisões da associação
+      - button "Saber Como Aderir" [ref=e156]
+  - generic [ref=e159]:
+    - generic [ref=e160]:
+      - generic [ref=e161]:
+        - generic [ref=e163]: Aluguer e Marcações
+        - heading "Reserve o Nosso Espaço" [level=2] [ref=e164]
+      - paragraph [ref=e165]: Precisa de um local para o seu próximo evento? O nosso salão está disponível para aluguer.
+      - list [ref=e166]:
+        - listitem [ref=e167]: Festas de Aniversário
+        - listitem [ref=e169]: Jantares de Grupo
+        - listitem [ref=e171]: Reuniões Comunitárias
+        - listitem [ref=e173]: Eventos Culturais
+        - listitem [ref=e175]: Batizados e Celebrações
+      - generic [ref=e177]:
+        - heading "Informações Úteis" [level=4] [ref=e178]
+        - paragraph [ref=e179]: O aluguer inclui acesso ao salão principal, casas de banho e área de apoio. Para detalhes sobre preços e disponibilidade, preencha o formulário.
+        - generic [ref=e180]:
+          - img [ref=e181]
+          - generic [ref=e183]: Contacte-nos para urgências
+    - generic [ref=e184]:
+      - generic [ref=e185]:
+        - button "Evento" [ref=e186]
+        - button "Alugar Salão" [ref=e187]
+      - generic [ref=e188]:
+        - generic [ref=e189]:
+          - generic [ref=e190]:
+            - text: Nome Completo
+            - textbox "O seu nome" [ref=e191]
+          - generic [ref=e192]:
+            - text: Contacto
+            - textbox "Telemóvel" [ref=e193]
+        - generic [ref=e194]:
+          - text: Data Pretendida
+          - textbox [ref=e195]
+        - generic [ref=e196]:
+          - text: Mensagem / Detalhes
+          - textbox "Diga-nos o que pretende organizar..." [ref=e197]
+        - button "Enviar Pedido" [ref=e198]:
+          - img [ref=e199]
+          - text: Enviar Pedido
+  - generic [ref=e203]:
+    - generic [ref=e204]:
+      - generic [ref=e206]: Críticas do Google
+      - heading "O Que Dizem de Nós" [level=2] [ref=e207]
+    - generic [ref=e208]:
+      - generic [ref=e209]:
+        - generic [ref=e210]:
+          - img [ref=e211]
+          - img [ref=e213]
+          - img [ref=e215]
+          - img [ref=e217]
+          - img [ref=e219]
+        - paragraph [ref=e221]: "\"Excelente ambiente para convívio.\""
+        - generic [ref=e222]:
+          - generic [ref=e223]: Jacinto Primitivo
+          - generic [ref=e224]: há um ano
+      - generic [ref=e225]:
+        - generic [ref=e226]:
+          - img [ref=e227]
+          - img [ref=e229]
+          - img [ref=e231]
+          - img [ref=e233]
+          - img [ref=e235]
+        - paragraph [ref=e237]: "\"Espaço agradável em Ulmeiro.\""
+        - generic [ref=e238]:
+          - generic [ref=e239]: Maria José Silva
+          - generic [ref=e240]: há 8 meses
+      - generic [ref=e241]:
+        - generic [ref=e242]:
+          - img [ref=e243]
+          - img [ref=e245]
+          - img [ref=e247]
+          - img [ref=e249]
+          - img [ref=e251]
+        - paragraph [ref=e253]: "\"Poderia melhorar o atendimento.\""
+        - generic [ref=e254]:
+          - generic [ref=e255]: Sergiolopesmartins
+          - generic [ref=e256]: há um ano
+    - generic [ref=e258]:
+      - generic [ref=e259]:
+        - img [ref=e260]
+        - generic [ref=e262]: "3.0"
+      - generic [ref=e264]: Média Google
+  - generic [ref=e266]:
+    - generic [ref=e267]:
+      - generic [ref=e268]:
+        - generic [ref=e270]: Contactos
+        - heading "Fale Connosco" [level=2] [ref=e271]
+      - generic [ref=e272]:
+        - generic [ref=e273]:
+          - img [ref=e275]
+          - generic [ref=e278]:
+            - heading "Endereço" [level=4] [ref=e279]
+            - paragraph [ref=e280]:
+              - text: R. Fonte Pública 6, Ulmeiro
+              - text: 2495-190, Portugal
+        - generic [ref=e281]:
+          - img [ref=e283]
+          - generic [ref=e286]:
+            - heading "Horário" [level=4] [ref=e287]
+            - paragraph [ref=e288]:
+              - text: Abre às 21:00
+              - text: Encerra tardiamente
+        - generic [ref=e289]:
+          - img [ref=e291]
+          - generic [ref=e293]:
+            - heading "Telefone" [level=4] [ref=e294]
+            - paragraph [ref=e295]: Adicione o número de telefone local
+      - generic [ref=e296]:
+        - link [ref=e297] [cursor=pointer]:
+          - /url: "#"
+          - img [ref=e298]
+        - link [ref=e300] [cursor=pointer]:
+          - /url: "#"
+          - img [ref=e301]
+    - iframe [ref=e305]
+  - contentinfo [ref=e306]:
+    - generic [ref=e309]:
+      - generic [ref=e310]:
+        - generic [ref=e311]:
+          - img "Logótipo ASSUL" [ref=e312]
+          - generic [ref=e313]: ASSUL
+        - generic [ref=e314]: Associação Social do Ulmeiro
+      - paragraph [ref=e315]: © 2026 ASSUL - Todos os direitos reservados.
+      - generic [ref=e316]:
+        - link "Privacidade" [ref=e317] [cursor=pointer]:
+          - /url: "#"
+        - link "Termos" [ref=e318] [cursor=pointer]:
+          - /url: "#"
