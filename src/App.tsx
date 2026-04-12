@@ -26,43 +26,27 @@ import Contracts from './components/Contracts';
 import Receipts from './components/Receipts';
 import Movements from './components/Movements';
 import Settings from './components/Settings';
-import Login from './components/Login';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
 
-function AppContent() {
-  const { user, loading } = useAuth();
+const navItems = [
+  { id: 'dashboard', label: 'DASHBOARD', icon: LayoutDashboard },
+  { id: 'properties', label: 'IMÓVEIS', icon: Building2 },
+  { id: 'tenants', label: 'INQUILINOS', icon: Users },
+  { id: 'contracts', label: 'CONTRATOS', icon: FileText },
+  { id: 'payments', label: 'PAGAMENTOS', icon: Wallet },
+  { id: 'receipts', label: 'RECIBOS', icon: Receipt },
+  { id: 'expenses', label: 'DESPESAS', icon: Droplets },
+  { id: 'landlord-expenses', label: 'ENCARGOS', icon: PiggyBank },
+  { id: 'movements', label: 'MOVIMENTOS', icon: ArrowLeftRight },
+  { id: 'maintenance', label: 'MANUTENÇÃO', icon: Wrench },
+  { id: 'ai', label: 'IA', icon: Sparkles },
+  { id: 'settings', label: 'DEFINIÇÕES', icon: SettingsIcon },
+];
+
+export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-[#F8FAFC]">
-        <div className="w-10 h-10 border-4 border-neutral-200 border-t-[#1E293B] rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Login />;
-  }
-
-  const navItems = [
-    { id: 'dashboard', label: 'DASHBOARD', icon: LayoutDashboard },
-    { id: 'properties', label: 'IMÓVEIS', icon: Building2 },
-    { id: 'tenants', label: 'INQUILINOS', icon: Users },
-    { id: 'contracts', label: 'CONTRATOS', icon: FileText },
-    { id: 'payments', label: 'PAGAMENTOS', icon: Wallet },
-    { id: 'receipts', label: 'RECIBOS', icon: Receipt },
-    { id: 'expenses', label: 'DESPESAS', icon: Droplets },
-    { id: 'landlord-expenses', label: 'ENCARGOS', icon: PiggyBank },
-    { id: 'movements', label: 'MOVIMENTOS', icon: ArrowLeftRight },
-    { id: 'maintenance', label: 'MANUTENÇÃO', icon: Wrench },
-    { id: 'ai', label: 'IA', icon: Sparkles },
-    { id: 'settings', label: 'DEFINIÇÕES', icon: SettingsIcon },
-  ];
 
   return (
     <div className="flex flex-col h-screen bg-[#F8FAFC] overflow-hidden">
-      {/* Top Header with User Profile */}
       <header className="bg-white border-b border-neutral-100 px-6 py-4 flex items-center justify-between z-10">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-[#1E293B] rounded-lg flex items-center justify-center text-white font-black text-xs">IF</div>
@@ -70,7 +54,6 @@ function AppContent() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 overflow-auto pb-24">
         <div className="p-6 md:p-10 max-w-[1600px] mx-auto">
           {activeTab === 'dashboard' && <Dashboard onNavigate={setActiveTab} />}
@@ -88,8 +71,6 @@ function AppContent() {
         </div>
       </main>
 
-
-      {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 py-2 flex justify-center items-center z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar max-w-full">
           {navItems.map((item) => (
@@ -117,12 +98,3 @@ function AppContent() {
     </div>
   );
 }
-
-export default function App() {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  );
-}
-

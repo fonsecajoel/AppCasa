@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -13,7 +12,6 @@ const QUICK_PASS = 'admin123';
 const QUICK_NAME = 'Admin';
 
 export default function Login() {
-  const { login, loginWithEmail, registerWithEmail, resetPassword } = useAuth();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,15 +22,16 @@ export default function Login() {
   const handleQuickAccess = async () => {
     setLoading(true);
     try {
-      await loginWithEmail(QUICK_EMAIL, QUICK_PASS);
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: QUICK_EMAIL, password: QUICK_PASS, name: QUICK_NAME }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro');
       toast.success('Bem-vindo, Admin!');
-    } catch {
-      try {
-        await registerWithEmail(QUICK_EMAIL, QUICK_PASS, QUICK_NAME);
-        toast.success('Conta admin criada e sessão iniciada!');
-      } catch (regErr: any) {
-        toast.error('Erro no acesso rápido: ' + regErr.message);
-      }
+    } catch (err: any) {
+      toast.error('Erro no acesso rápido: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -43,7 +42,13 @@ export default function Login() {
     if (!email || !password) return toast.error('Preencha todos os campos');
     setLoading(true);
     try {
-      await loginWithEmail(email, password);
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro');
       toast.success('Bem-vindo de volta!');
     } catch (error: any) {
       toast.error('Erro ao entrar: ' + error.message);
@@ -57,7 +62,13 @@ export default function Login() {
     if (!email || !password || !name) return toast.error('Preencha todos os campos');
     setLoading(true);
     try {
-      await registerWithEmail(email, password, name);
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro');
       toast.success('Conta criada com sucesso!');
     } catch (error: any) {
       toast.error('Erro ao criar conta: ' + error.message);
@@ -68,17 +79,7 @@ export default function Login() {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!resetEmail) return toast.error('Introduza o seu email');
-    setLoading(true);
-    try {
-      await resetPassword(resetEmail);
-      toast.success('Email de recuperação enviado!');
-      setShowReset(false);
-    } catch (error: any) {
-      toast.error('Erro: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
+    toast.error('Reset de palavra-passe não disponível neste ambiente.');
   };
 
   if (showReset) {
@@ -214,7 +215,7 @@ export default function Login() {
                     <span className="bg-white px-2 text-neutral-400">Ou continue com</span>
                   </div>
                 </div>
-                <Button variant="outline" className="w-full rounded-xl h-11 gap-2" onClick={login}>
+                <Button variant="outline" className="w-full rounded-xl h-11 gap-2" onClick={() => toast.error('Google login não disponível neste ambiente.')}>
                   <svg className="h-4 w-4" viewBox="0 0 24 24">
                     <path
                       d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
