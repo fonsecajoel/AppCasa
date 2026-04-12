@@ -7,9 +7,21 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GoogleGenAI } from "@google/genai";
+import { initializeApp, cert, type ServiceAccount } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+import appConfig from "./firebase-applet-config.json" with { type: "json" };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const adminApp = initializeApp({ projectId: appConfig.projectId });
+const adminDb = getFirestore(adminApp, appConfig.firestoreDatabaseId);
+
+const ALLOWED_COLLECTIONS = [
+  'properties', 'units', 'tenants', 'contracts', 'payments',
+  'receipts', 'expenses', 'landlordExpenses', 'movements',
+  'maintenanceTickets', 'financialMovements', 'utilityExpenses',
+];
 
 function sanitizeText(input: unknown, maxLength = 500): string {
   if (typeof input !== "string") return "";
@@ -62,15 +74,96 @@ async function startServer() {
 
   const apiLimiter = rateLimit({
     windowMs: 60_000,
-    max: 20,
+    max: 100,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: "Demasiados pedidos. Tente novamente em breve." },
   });
   app.use("/api/", apiLimiter);
 
+  function isAllowedCollection(col: string): boolean {
+    return ALLOWED_COLLECTIONS.includes(col);
+  }
+
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });
+  });
+
+  app.get("/api/db/:collection", async (req, res) => {
+    try {
+      const col = req.params.collection;
+      if (!isAllowedCollection(col)) return res.status(400).json({ error: "Coleção inválida." });
+      const snapshot = await adminDb.collection(col).get();
+      const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      res.json(docs);
+    } catch (error) {
+      console.error("GET collection error:", error);
+      res.status(500).json({ error: "Erro ao ler dados." });
+    }
+  });
+
+  app.post("/api/db/:collection", async (req, res) => {
+    try {
+      const col = req.params.collection;
+      if (!isAllowedCollection(col)) return res.status(400).json({ error: "Coleção inválida." });
+      const docRef = await adminDb.collection(col).add(req.body);
+      res.json({ id: docRef.id });
+    } catch (error) {
+      console.error("POST doc error:", error);
+      res.status(500).json({ error: "Erro ao criar." });
+    }
+  });
+
+  app.put("/api/db/:collection/:id", async (req, res) => {
+    try {
+      const { collection: col, id } = req.params;
+      if (!isAllowedCollection(col)) return res.status(400).json({ error: "Coleção inválida." });
+      await adminDb.collection(col).doc(id).update(req.body);
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("PUT doc error:", error);
+      res.status(500).json({ error: "Erro ao atualizar." });
+    }
+  });
+
+  app.delete("/api/db/:collection/:id", async (req, res) => {
+    try {
+      const { collection: col, id } = req.params;
+      if (!isAllowedCollection(col)) return res.status(400).json({ error: "Coleção inválida." });
+      await adminDb.collection(col).doc(id).delete();
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("DELETE doc error:", error);
+      res.status(500).json({ error: "Erro ao apagar." });
+    }
+  });
+
+  app.post("/api/db-batch", async (req, res) => {
+    try {
+      const { operations } = req.body;
+      if (!Array.isArray(operations)) return res.status(400).json({ error: "Operações em falta." });
+      const batch = adminDb.batch();
+      const results: { id: string }[] = [];
+      for (const op of operations) {
+        if (!isAllowedCollection(op.collection)) continue;
+        if (op.type === 'set') {
+          const ref = op.id ? adminDb.collection(op.collection).doc(op.id) : adminDb.collection(op.collection).doc();
+          batch.set(ref, op.data);
+          results.push({ id: ref.id });
+        } else if (op.type === 'update') {
+          batch.update(adminDb.collection(op.collection).doc(op.id), op.data);
+          results.push({ id: op.id });
+        } else if (op.type === 'delete') {
+          batch.delete(adminDb.collection(op.collection).doc(op.id));
+          results.push({ id: op.id });
+        }
+      }
+      await batch.commit();
+      res.json({ ok: true, results });
+    } catch (error) {
+      console.error("BATCH error:", error);
+      res.status(500).json({ error: "Erro no batch." });
+    }
   });
 
   app.post("/api/generate-ad", async (req, res) => {
