@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { fetchCollection } from '../services/api';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -42,20 +41,20 @@ export default function Dashboard({ onNavigate }: { onNavigate?: (tab: string) =
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [movements, setMovements] = useState<Movement[]>([]);
 
-  useEffect(() => {
-    const unsubProps = onSnapshot(collection(db, 'properties'), (s) => setProperties(s.docs.map(d => ({ id: d.id, ...d.data() } as Property))), (e) => handleFirestoreError(e, OperationType.LIST, 'properties'));
-    const unsubUnits = onSnapshot(collection(db, 'units'), (s) => setUnits(s.docs.map(d => ({ id: d.id, ...d.data() } as Unit))), (e) => handleFirestoreError(e, OperationType.LIST, 'units'));
-    const unsubTenants = onSnapshot(collection(db, 'tenants'), (s) => setTenants(s.docs.map(d => ({ id: d.id, ...d.data() } as Tenant))), (e) => handleFirestoreError(e, OperationType.LIST, 'tenants'));
-    const unsubContracts = onSnapshot(collection(db, 'contracts'), (s) => setContracts(s.docs.map(d => ({ id: d.id, ...d.data() } as Contract))), (e) => handleFirestoreError(e, OperationType.LIST, 'contracts'));
-    const unsubPayments = onSnapshot(collection(db, 'payments'), (s) => setPayments(s.docs.map(d => ({ id: d.id, ...d.data() } as Payment))), (e) => handleFirestoreError(e, OperationType.LIST, 'payments'));
-    const unsubReceipts = onSnapshot(collection(db, 'receipts'), (s) => setReceipts(s.docs.map(d => ({ id: d.id, ...d.data() } as Receipt))), (e) => handleFirestoreError(e, OperationType.LIST, 'receipts'));
-    const unsubCharges = onSnapshot(collection(db, 'landlordExpenses'), (s) => setCharges(s.docs.map(d => ({ id: d.id, ...d.data() } as LandlordCharge))), (e) => handleFirestoreError(e, OperationType.LIST, 'landlordExpenses'));
-    const unsubExpenses = onSnapshot(collection(db, 'expenses'), (s) => setExpenses(s.docs.map(d => ({ id: d.id, ...d.data() } as Expense))), (e) => handleFirestoreError(e, OperationType.LIST, 'expenses'));
-    const unsubMovements = onSnapshot(collection(db, 'movements'), (s) => setMovements(s.docs.map(d => ({ id: d.id, ...d.data() } as Movement))), (e) => handleFirestoreError(e, OperationType.LIST, 'movements'));
+  const reload = () => {
+    fetchCollection<Property>('properties').then(setProperties).catch(console.error);
+    fetchCollection<Unit>('units').then(setUnits).catch(console.error);
+    fetchCollection<Tenant>('tenants').then(setTenants).catch(console.error);
+    fetchCollection<Contract>('contracts').then(setContracts).catch(console.error);
+    fetchCollection<Payment>('payments').then(setPayments).catch(console.error);
+    fetchCollection<Receipt>('receipts').then(setReceipts).catch(console.error);
+    fetchCollection<LandlordCharge>('landlordExpenses').then(setCharges).catch(console.error);
+    fetchCollection<Expense>('expenses').then(setExpenses).catch(console.error);
+    fetchCollection<Movement>('movements').then(setMovements).catch(console.error);
+  };
 
-    return () => {
-      unsubProps(); unsubUnits(); unsubTenants(); unsubContracts(); unsubPayments(); unsubReceipts(); unsubCharges(); unsubExpenses(); unsubMovements();
-    };
+  useEffect(() => {
+    reload();
   }, []);
 
   // Stats Calculations

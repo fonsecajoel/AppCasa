@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../firebase';
+import { fetchCollection } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
@@ -28,10 +27,12 @@ export default function AIAssistant() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const pSnap = await getDocs(collection(db, 'properties'));
-      const tSnap = await getDocs(collection(db, 'tenants'));
-      setProperties(pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      setTenants(tSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const [props, tns] = await Promise.all([
+        fetchCollection('properties'),
+        fetchCollection('tenants')
+      ]);
+      setProperties(props);
+      setTenants(tns);
     };
     fetchData();
   }, []);
@@ -56,13 +57,15 @@ export default function AIAssistant() {
     setLoading(true);
     try {
       // Fetch some mock/real data for the report
-      const paySnap = await getDocs(collection(db, 'payments'));
-      const expSnap = await getDocs(collection(db, 'expenses'));
+      const [payments, expenses] = await Promise.all([
+        fetchCollection('payments'),
+        fetchCollection('expenses')
+      ]);
       
       const res = await generateMonthlyReport({
         properties,
-        payments: paySnap.docs.map(d => d.data()),
-        expenses: expSnap.docs.map(d => d.data())
+        payments,
+        expenses
       });
       setResult(res || 'Erro ao gerar relatório.');
     } catch (err) {
