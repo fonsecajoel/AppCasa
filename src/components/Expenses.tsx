@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -45,16 +43,42 @@ import {
   Clock
 } from 'lucide-react';
 import { Expense, Property, Unit, Tenant } from '../types';
+import { fetchCollection, createDoc, updateDoc as apiUpdateDoc, deleteDoc as apiDeleteDoc } from '../services/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Expenses() {
+  const { user } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+
+  const loadExpenses = () => {
+    fetchCollection<Expense>('expenses').then(setExpenses).catch(console.error);
+  };
+
+  const loadProperties = () => {
+    fetchCollection<Property>('properties').then(setProperties).catch(console.error);
+  };
+
+  const loadUnits = () => {
+    fetchCollection<Unit>('units').then(setUnits).catch(console.error);
+  };
+
+  const loadTenants = () => {
+    fetchCollection<Tenant>('tenants').then(setTenants).catch(console.error);
+  };
+
+  const loadData = () => {
+    loadExpenses();
+    loadProperties();
+    loadUnits();
+    loadTenants();
+  };
   
   const [newExpense, setNewExpense] = useState<Partial<Expense>>({
     propertyId: '',
@@ -70,32 +94,28 @@ export default function Expenses() {
   });
 
   useEffect(() => {
-    const unsubExpenses = onSnapshot(collection(db, 'expenses'), (s) => setExpenses(s.docs.map(d => ({ id: d.id, ...d.data() } as Expense))), (e) => handleFirestoreError(e, OperationType.LIST, 'expenses'));
-    const unsubProps = onSnapshot(collection(db, 'properties'), (s) => setProperties(s.docs.map(d => ({ id: d.id, ...d.data() } as Property))), (e) => handleFirestoreError(e, OperationType.LIST, 'properties'));
-    const unsubUnits = onSnapshot(collection(db, 'units'), (s) => setUnits(s.docs.map(d => ({ id: d.id, ...d.data() } as Unit))), (e) => handleFirestoreError(e, OperationType.LIST, 'units'));
-    const unsubTenants = onSnapshot(collection(db, 'tenants'), (s) => setTenants(s.docs.map(d => ({ id: d.id, ...d.data() } as Tenant))), (e) => handleFirestoreError(e, OperationType.LIST, 'tenants'));
-
-    return () => {
-      unsubExpenses(); unsubProps(); unsubUnits(); unsubTenants();
-    };
+    loadData();
   }, []);
 
   const handleSaveExpense = async () => {
     try {
       if (editingExpense) {
-        await updateDoc(doc(db, 'expenses', editingExpense.id), { ...newExpense });
+        await apiUpdateDoc('expenses', editingExpense.id, { ...newExpense });
         toast.success('Despesa atualizada!');
       } else {
-        await addDoc(collection(db, 'expenses'), {
+        await createDoc('expenses', {
           ...newExpense,
+          ownerId: user?.uid || '',
           createdAt: new Date().toISOString()
         });
         toast.success('Despesa registada!');
       }
+      loadExpenses();
       setIsAddDialogOpen(false);
       resetForm();
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'expenses');
+      console.error(err);
+      toast.error('Erro ao guardar despesa.');
     }
   };
 
@@ -117,10 +137,12 @@ export default function Expenses() {
 
   const handleDeleteExpense = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'expenses', id));
+      await apiDeleteDoc('expenses', id);
       toast.success('Despesa removida.');
+      loadExpenses();
     } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, 'expenses');
+      console.error(err);
+      toast.error('Erro ao remover despesa.');
     }
   };
 

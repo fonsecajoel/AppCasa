@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -44,14 +42,30 @@ import {
   Clock
 } from 'lucide-react';
 import { LandlordExpense, Property } from '../types';
+import { fetchCollection, createDoc, updateDoc as apiUpdateDoc, deleteDoc as apiDeleteDoc } from '../services/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function LandlordExpenses() {
+  const { user } = useAuth();
   const [expenses, setExpenses] = useState<LandlordExpense[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<LandlordExpense | null>(null);
+
+  const loadExpenses = () => {
+    fetchCollection<LandlordExpense>('landlordExpenses').then(setExpenses).catch(console.error);
+  };
+
+  const loadProperties = () => {
+    fetchCollection<Property>('properties').then(setProperties).catch(console.error);
+  };
+
+  const loadData = () => {
+    loadExpenses();
+    loadProperties();
+  };
   
   const [newExpense, setNewExpense] = useState<Partial<LandlordExpense>>({
     propertyId: '',
@@ -64,30 +78,28 @@ export default function LandlordExpenses() {
   });
 
   useEffect(() => {
-    const unsubExpenses = onSnapshot(collection(db, 'landlordExpenses'), (s) => setExpenses(s.docs.map(d => ({ id: d.id, ...d.data() } as LandlordExpense))), (e) => handleFirestoreError(e, OperationType.LIST, 'landlordExpenses'));
-    const unsubProps = onSnapshot(collection(db, 'properties'), (s) => setProperties(s.docs.map(d => ({ id: d.id, ...d.data() } as Property))), (e) => handleFirestoreError(e, OperationType.LIST, 'properties'));
-
-    return () => {
-      unsubExpenses(); unsubProps();
-    };
+    loadData();
   }, []);
 
   const handleSaveExpense = async () => {
     try {
       if (editingExpense) {
-        await updateDoc(doc(db, 'landlordExpenses', editingExpense.id), { ...newExpense });
+        await apiUpdateDoc('landlordExpenses', editingExpense.id, { ...newExpense });
         toast.success('Encargo atualizado!');
       } else {
-        await addDoc(collection(db, 'landlordExpenses'), {
+        await createDoc('landlordExpenses', {
           ...newExpense,
+          ownerId: user?.uid || '',
           createdAt: new Date().toISOString()
         });
         toast.success('Encargo registado!');
       }
+      loadExpenses();
       setIsAddDialogOpen(false);
       resetForm();
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'landlordExpenses');
+      console.error(err);
+      toast.error('Erro ao guardar encargo.');
     }
   };
 
@@ -106,10 +118,12 @@ export default function LandlordExpenses() {
 
   const handleDeleteExpense = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'landlordExpenses', id));
+      await apiDeleteDoc('landlordExpenses', id);
       toast.success('Encargo removido.');
+      loadExpenses();
     } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, 'landlordExpenses');
+      console.error(err);
+      toast.error('Erro ao remover encargo.');
     }
   };
 

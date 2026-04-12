@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, addDoc, updateDoc, doc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -25,9 +23,12 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { MaintenanceTicket, Property } from '../types';
+import { fetchCollection, createDoc, updateDoc as apiUpdateDoc } from '../services/api';
 import { toast } from 'sonner';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Maintenance() {
+  const { user } = useAuth();
   const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
 
@@ -39,19 +40,21 @@ export default function Maintenance() {
     status: 'Open'
   });
 
+  const loadTickets = () => {
+    fetchCollection<MaintenanceTicket>('maintenanceTickets').then(setTickets).catch(console.error);
+  };
+
+  const loadProperties = () => {
+    fetchCollection<Property>('properties').then(setProperties).catch(console.error);
+  };
+
+  const loadData = () => {
+    loadTickets();
+    loadProperties();
+  };
+
   useEffect(() => {
-    const unsubTickets = onSnapshot(collection(db, 'maintenanceTickets'), (snapshot) => {
-      setTickets(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MaintenanceTicket)));
-    }, (err) => handleFirestoreError(err, OperationType.LIST, 'maintenanceTickets'));
-
-    const unsubProperties = onSnapshot(collection(db, 'properties'), (snapshot) => {
-      setProperties(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property)));
-    }, (err) => handleFirestoreError(err, OperationType.LIST, 'properties'));
-
-    return () => {
-      unsubTickets();
-      unsubProperties();
-    };
+    loadData();
   }, []);
 
   const handleSaveTicket = async () => {
@@ -60,25 +63,29 @@ export default function Maintenance() {
       return;
     }
     try {
-      await addDoc(collection(db, 'maintenanceTickets'), {
+      await createDoc('maintenanceTickets', {
         ...newTicket,
+        ownerId: user?.uid || '',
         createdAt: new Date().toISOString()
       });
       toast.success('Ticket de manutenção criado!');
+      loadTickets();
       setIsAddDialogOpen(false);
       setNewTicket({ propertyId: '', description: '', priority: 'Medium', status: 'Open' });
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'maintenanceTickets');
+      console.error(err);
+      toast.error('Erro ao criar ticket.');
     }
   };
 
   const handleUpdateStatus = async (id: string, status: 'Open' | 'In-Progress' | 'Closed') => {
     try {
-      await updateDoc(doc(db, 'maintenanceTickets', id), { status });
+      await apiUpdateDoc('maintenanceTickets', id, { status });
       toast.success(`Estado atualizado para ${status}`);
+      loadTickets();
     } catch (err) {
       toast.error('Erro ao atualizar estado.');
-      handleFirestoreError(err, OperationType.UPDATE, 'maintenanceTickets');
+      console.error(err);
     }
   };
 

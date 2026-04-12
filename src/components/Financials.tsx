@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -47,10 +45,13 @@ import {
   Paperclip
 } from 'lucide-react';
 import { Payment, Property, Unit, Tenant, LandlordCharge } from '../types';
+import { fetchCollection, createDoc, updateDoc as apiUpdateDoc, deleteDoc as apiDeleteDoc } from '../services/api';
 import { toast } from 'sonner';
 import { format, addMonths, addYears } from 'date-fns';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Financials() {
+  const { user } = useAuth();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -59,6 +60,34 @@ export default function Financials() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+
+  const loadPayments = () => {
+    fetchCollection<Payment>('payments').then(setPayments).catch(console.error);
+  };
+
+  const loadProperties = () => {
+    fetchCollection<Property>('properties').then(setProperties).catch(console.error);
+  };
+
+  const loadUnits = () => {
+    fetchCollection<Unit>('units').then(setUnits).catch(console.error);
+  };
+
+  const loadTenants = () => {
+    fetchCollection<Tenant>('tenants').then(setTenants).catch(console.error);
+  };
+
+  const loadCharges = () => {
+    fetchCollection<LandlordCharge>('landlordExpenses').then(setCharges).catch(console.error);
+  };
+
+  const loadData = () => {
+    loadPayments();
+    loadProperties();
+    loadUnits();
+    loadTenants();
+    loadCharges();
+  };
   
   const calculateNextDueDate = (fromDate: string, frequency: string): string => {
     if (!fromDate) return '';
@@ -88,33 +117,28 @@ export default function Financials() {
   });
 
   useEffect(() => {
-    const unsubPayments = onSnapshot(collection(db, 'payments'), (s) => setPayments(s.docs.map(d => ({ id: d.id, ...d.data() } as Payment))), (e) => handleFirestoreError(e, OperationType.LIST, 'payments'));
-    const unsubProps = onSnapshot(collection(db, 'properties'), (s) => setProperties(s.docs.map(d => ({ id: d.id, ...d.data() } as Property))), (e) => handleFirestoreError(e, OperationType.LIST, 'properties'));
-    const unsubUnits = onSnapshot(collection(db, 'units'), (s) => setUnits(s.docs.map(d => ({ id: d.id, ...d.data() } as Unit))), (e) => handleFirestoreError(e, OperationType.LIST, 'units'));
-    const unsubTenants = onSnapshot(collection(db, 'tenants'), (s) => setTenants(s.docs.map(d => ({ id: d.id, ...d.data() } as Tenant))), (e) => handleFirestoreError(e, OperationType.LIST, 'tenants'));
-    const unsubCharges = onSnapshot(collection(db, 'landlordExpenses'), (s) => setCharges(s.docs.map(d => ({ id: d.id, ...d.data() } as LandlordCharge))), (e) => handleFirestoreError(e, OperationType.LIST, 'landlordExpenses'));
-
-    return () => {
-      unsubPayments(); unsubProps(); unsubUnits(); unsubTenants(); unsubCharges();
-    };
+    loadData();
   }, []);
 
   const handleSavePayment = async () => {
     try {
       if (editingPayment) {
-        await updateDoc(doc(db, 'payments', editingPayment.id), { ...newPayment });
+        await apiUpdateDoc('payments', editingPayment.id, { ...newPayment });
         toast.success('Pagamento atualizado!');
       } else {
-        await addDoc(collection(db, 'payments'), {
+        await createDoc('payments', {
           ...newPayment,
+          ownerId: user?.uid || '',
           createdAt: new Date().toISOString()
         });
         toast.success('Pagamento registado!');
       }
+      loadPayments();
       setIsAddDialogOpen(false);
       resetForm();
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'payments');
+      console.error(err);
+      toast.error('Erro ao guardar pagamento.');
     }
   };
 
@@ -140,10 +164,12 @@ export default function Financials() {
 
   const handleDeletePayment = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'payments', id));
+      await apiDeleteDoc('payments', id);
       toast.success('Pagamento removido.');
+      loadPayments();
     } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, 'payments');
+      console.error(err);
+      toast.error('Erro ao remover pagamento.');
     }
   };
 
