@@ -145,9 +145,9 @@ export default function PropertyManager() {
       setIsAddDialogOpen(false);
       resetForm();
       toast.success(editingProperty ? 'Propriedade atualizada!' : 'Propriedade criada!');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error('Erro ao guardar imóvel.');
+      toast.error('Erro ao guardar imóvel: ' + (err?.message || err));
     }
   };
 

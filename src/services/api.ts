@@ -1,9 +1,18 @@
 const API_BASE = '/api/db';
 
+async function handleResponse(res: Response, context: string): Promise<unknown> {
+  if (res.ok) return res.json();
+  let msg = `${context} (HTTP ${res.status})`;
+  try {
+    const body = await res.json();
+    if (body?.error) msg = body.error;
+  } catch {}
+  throw new Error(msg);
+}
+
 export async function fetchCollection<T>(collection: string): Promise<T[]> {
   const res = await fetch(`${API_BASE}/${collection}`);
-  if (!res.ok) throw new Error(`Erro ao ler ${collection}`);
-  return res.json();
+  return handleResponse(res, `Erro ao ler ${collection}`) as Promise<T[]>;
 }
 
 export async function createDoc(collection: string, data: Record<string, unknown>): Promise<string> {
@@ -12,8 +21,7 @@ export async function createDoc(collection: string, data: Record<string, unknown
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`Erro ao criar em ${collection}`);
-  const result = await res.json();
+  const result = await handleResponse(res, `Erro ao criar em ${collection}`) as { id: string };
   return result.id;
 }
 
@@ -23,14 +31,14 @@ export async function updateDoc(collection: string, id: string, data: Record<str
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`Erro ao atualizar em ${collection}`);
+  await handleResponse(res, `Erro ao atualizar em ${collection}`);
 }
 
 export async function deleteDoc(collection: string, id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/${collection}/${id}`, {
     method: 'DELETE',
   });
-  if (!res.ok) throw new Error(`Erro ao apagar em ${collection}`);
+  await handleResponse(res, `Erro ao apagar em ${collection}`);
 }
 
 interface BatchOperation {
@@ -46,6 +54,5 @@ export async function batchWrite(operations: BatchOperation[]): Promise<{ ok: bo
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ operations }),
   });
-  if (!res.ok) throw new Error('Erro no batch');
-  return res.json();
+  return handleResponse(res, 'Erro no batch') as Promise<{ ok: boolean; results: { id: string }[] }>;
 }
