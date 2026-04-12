@@ -9,6 +9,7 @@ import { fileURLToPath } from "url";
 import { GoogleGenAI } from "@google/genai";
 import { initializeApp, cert, type ServiceAccount } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { getAuth as getAdminAuth } from "firebase-admin/auth";
 import appConfig from "./firebase-applet-config.json" with { type: "json" };
 
 const __filename = fileURLToPath(import.meta.url);
@@ -16,6 +17,7 @@ const __dirname = path.dirname(__filename);
 
 const adminApp = initializeApp({ projectId: appConfig.projectId });
 const adminDb = getFirestore(adminApp, appConfig.firestoreDatabaseId);
+const adminAuth = getAdminAuth(adminApp);
 
 const ALLOWED_COLLECTIONS = [
   'properties', 'units', 'tenants', 'contracts', 'payments',
@@ -87,6 +89,61 @@ async function startServer() {
 
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });
+  });
+
+  app.post("/api/auth", async (req, res) => {
+    try {
+      const { email, password, name } = req.body;
+      if (!email || !password) return res.status(400).json({ error: "Email e palavra-passe obrigatórios." });
+
+      let uid: string;
+      try {
+        const existing = await adminAuth.getUserByEmail(email);
+        const verifyRes = await fetch(
+          `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${appConfig.apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password, returnSecureToken: true }),
+          }
+        );
+        if (!verifyRes.ok) {
+          const err = await verifyRes.json();
+          return res.status(401).json({ error: err.error?.message || "Credenciais inválidas." });
+        }
+        uid = existing.uid;
+      } catch (notFound: any) {
+        if (notFound.code === "auth/user-not-found") {
+          const created = await adminAuth.createUser({
+            email,
+            password,
+            displayName: name || email.split("@")[0],
+          });
+          uid = created.uid;
+        } else {
+          const verifyRes = await fetch(
+            `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${appConfig.apiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, password, returnSecureToken: true }),
+            }
+          );
+          if (!verifyRes.ok) {
+            const err = await verifyRes.json();
+            return res.status(401).json({ error: err.error?.message || "Credenciais inválidas." });
+          }
+          const data = await verifyRes.json();
+          return res.json({ idToken: data.idToken, uid: data.localId });
+        }
+      }
+
+      const customToken = await adminAuth.createCustomToken(uid);
+      res.json({ customToken, uid });
+    } catch (error: any) {
+      console.error("Auth error:", error);
+      res.status(500).json({ error: error.message || "Erro de autenticação." });
+    }
   });
 
   app.get("/api/db/:collection", async (req, res) => {

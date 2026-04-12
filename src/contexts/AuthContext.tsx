@@ -5,13 +5,10 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   signOut,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
+  signInWithCustomToken,
   sendPasswordResetEmail,
-  updateProfile,
 } from 'firebase/auth';
 import { auth } from '../firebase';
-import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
@@ -24,6 +21,19 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+async function authViaServer(email: string, password: string, name?: string): Promise<void> {
+  const res = await fetch('/api/auth', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, name }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Erro de autenticação.');
+  if (data.customToken) {
+    await signInWithCustomToken(auth, data.customToken);
+  }
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -43,12 +53,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const loginWithEmail = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    await authViaServer(email, password);
   };
 
   const registerWithEmail = async (email: string, password: string, name: string) => {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(cred.user, { displayName: name });
+    await authViaServer(email, password, name);
   };
 
   const resetPassword = async (email: string) => {
