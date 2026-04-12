@@ -1,17 +1,13 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import {
-  onAuthStateChanged,
-  User,
-  signInWithPopup,
-  GoogleAuthProvider,
-  signOut,
-  signInWithCustomToken,
-  sendPasswordResetEmail,
-} from 'firebase/auth';
-import { auth } from '../firebase';
+
+interface AppUser {
+  uid: string;
+  email: string;
+  displayName: string;
+}
 
 interface AuthContextType {
-  user: User | null;
+  user: AppUser | null;
   loading: boolean;
   login: () => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
@@ -22,7 +18,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-async function authViaServer(email: string, password: string, name?: string): Promise<void> {
+const SESSION_KEY = 'immoflow_user';
+
+async function authViaServer(email: string, password: string, name?: string): Promise<AppUser> {
   const res = await fetch('/api/auth', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -30,42 +28,53 @@ async function authViaServer(email: string, password: string, name?: string): Pr
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Erro de autenticação.');
-  if (data.customToken) {
-    await signInWithCustomToken(auth, data.customToken);
-  }
+  return {
+    uid: data.uid,
+    email,
+    displayName: name || data.displayName || email.split('@')[0],
+  };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setLoading(false);
-    });
-    return unsubscribe;
+    try {
+      const stored = localStorage.getItem(SESSION_KEY);
+      if (stored) setUser(JSON.parse(stored));
+    } catch {
+      localStorage.removeItem(SESSION_KEY);
+    }
+    setLoading(false);
   }, []);
 
-  const login = async () => {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+  const persist = (u: AppUser | null) => {
+    if (u) localStorage.setItem(SESSION_KEY, JSON.stringify(u));
+    else localStorage.removeItem(SESSION_KEY);
+    setUser(u);
   };
 
   const loginWithEmail = async (email: string, password: string) => {
-    await authViaServer(email, password);
+    const u = await authViaServer(email, password);
+    persist(u);
   };
 
   const registerWithEmail = async (email: string, password: string, name: string) => {
-    await authViaServer(email, password, name);
+    const u = await authViaServer(email, password, name);
+    persist(u);
   };
 
-  const resetPassword = async (email: string) => {
-    await sendPasswordResetEmail(auth, email);
+  const login = async () => {
+    throw new Error('Google login não suportado neste ambiente.');
+  };
+
+  const resetPassword = async (_email: string) => {
+    throw new Error('Reset de palavra-passe não suportado neste ambiente.');
   };
 
   const logout = async () => {
-    await signOut(auth);
+    persist(null);
   };
 
   return (

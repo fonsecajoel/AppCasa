@@ -97,6 +97,8 @@ async function startServer() {
       if (!email || !password) return res.status(400).json({ error: "Email e palavra-passe obrigatórios." });
 
       let uid: string;
+      let displayName: string;
+
       try {
         const existing = await adminAuth.getUserByEmail(email);
         const verifyRes = await fetch(
@@ -112,34 +114,18 @@ async function startServer() {
           return res.status(401).json({ error: err.error?.message || "Credenciais inválidas." });
         }
         uid = existing.uid;
+        displayName = existing.displayName || name || email.split("@")[0];
       } catch (notFound: any) {
         if (notFound.code === "auth/user-not-found") {
-          const created = await adminAuth.createUser({
-            email,
-            password,
-            displayName: name || email.split("@")[0],
-          });
+          displayName = name || email.split("@")[0];
+          const created = await adminAuth.createUser({ email, password, displayName });
           uid = created.uid;
         } else {
-          const verifyRes = await fetch(
-            `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${appConfig.apiKey}`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ email, password, returnSecureToken: true }),
-            }
-          );
-          if (!verifyRes.ok) {
-            const err = await verifyRes.json();
-            return res.status(401).json({ error: err.error?.message || "Credenciais inválidas." });
-          }
-          const data = await verifyRes.json();
-          return res.json({ idToken: data.idToken, uid: data.localId });
+          throw notFound;
         }
       }
 
-      const customToken = await adminAuth.createCustomToken(uid);
-      res.json({ customToken, uid });
+      res.json({ uid, displayName });
     } catch (error: any) {
       console.error("Auth error:", error);
       res.status(500).json({ error: error.message || "Erro de autenticação." });
