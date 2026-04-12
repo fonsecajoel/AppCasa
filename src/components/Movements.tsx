@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { fetchCollection, createDoc, updateDoc as apiUpdateDoc, deleteDoc as apiDeleteDoc } from '../services/api';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -45,8 +44,10 @@ import {
 import { Movement, Property, Unit } from '../types';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Movements() {
+  const { user } = useAuth();
   const [movements, setMovements] = useState<Movement[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -64,35 +65,30 @@ export default function Movements() {
   });
 
   useEffect(() => {
-    const qMovements = collection(db, 'movements');
-    const qProps = collection(db, 'properties');
-    const qUnits = collection(db, 'units');
-
-    const unsubMovements = onSnapshot(qMovements, (s) => setMovements(s.docs.map(d => ({ id: d.id, ...d.data() } as Movement))), (e) => handleFirestoreError(e, OperationType.LIST, 'movements'));
-    const unsubProps = onSnapshot(qProps, (s) => setProperties(s.docs.map(d => ({ id: d.id, ...d.data() } as Property))), (e) => handleFirestoreError(e, OperationType.LIST, 'properties'));
-    const unsubUnits = onSnapshot(qUnits, (s) => setUnits(s.docs.map(d => ({ id: d.id, ...d.data() } as Unit))), (e) => handleFirestoreError(e, OperationType.LIST, 'units'));
-
-    return () => {
-      unsubMovements(); unsubProps(); unsubUnits();
-    };
+    fetchCollection<Movement>('movements').then(setMovements).catch(console.error);
+    fetchCollection<Property>('properties').then(setProperties).catch(console.error);
+    fetchCollection<Unit>('units').then(setUnits).catch(console.error);
   }, []);
 
   const handleSaveMovement = async () => {
     try {
       if (editingMovement) {
-        await updateDoc(doc(db, 'movements', editingMovement.id), { ...newMovement });
+        await apiUpdateDoc('movements', editingMovement.id, { ...newMovement });
         toast.success('Movimento atualizado!');
       } else {
-        await addDoc(collection(db, 'movements'), {
+        await createDoc('movements', {
           ...newMovement,
+          ownerId: user?.uid || '',
           createdAt: new Date().toISOString()
         });
         toast.success('Movimento registado!');
       }
+      fetchCollection<Movement>('movements').then(setMovements).catch(console.error);
       setIsAddDialogOpen(false);
       resetForm();
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'movements');
+      console.error(err);
+      toast.error('Erro ao guardar movimento.');
     }
   };
 
@@ -111,10 +107,12 @@ export default function Movements() {
 
   const handleDeleteMovement = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'movements', id));
+      await apiDeleteDoc('movements', id);
       toast.success('Movimento removido.');
+      fetchCollection<Movement>('movements').then(setMovements).catch(console.error);
     } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, 'movements');
+      console.error(err);
+      toast.error('Erro ao remover movimento.');
     }
   };
 

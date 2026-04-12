@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { fetchCollection, createDoc, updateDoc as apiUpdateDoc, deleteDoc as apiDeleteDoc } from '../services/api';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -46,8 +45,10 @@ import {
 import { Receipt, Property, Unit, Tenant } from '../types';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Receipts() {
+  const { user } = useAuth();
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -72,37 +73,31 @@ export default function Receipts() {
   });
 
   useEffect(() => {
-    const qReceipts = collection(db, 'receipts');
-    const qProps = collection(db, 'properties');
-    const qUnits = collection(db, 'units');
-    const qTenants = collection(db, 'tenants');
-
-    const unsubReceipts = onSnapshot(qReceipts, (s) => setReceipts(s.docs.map(d => ({ id: d.id, ...d.data() } as Receipt))), (e) => handleFirestoreError(e, OperationType.LIST, 'receipts'));
-    const unsubProps = onSnapshot(qProps, (s) => setProperties(s.docs.map(d => ({ id: d.id, ...d.data() } as Property))), (e) => handleFirestoreError(e, OperationType.LIST, 'properties'));
-    const unsubUnits = onSnapshot(qUnits, (s) => setUnits(s.docs.map(d => ({ id: d.id, ...d.data() } as Unit))), (e) => handleFirestoreError(e, OperationType.LIST, 'units'));
-    const unsubTenants = onSnapshot(qTenants, (s) => setTenants(s.docs.map(d => ({ id: d.id, ...d.data() } as Tenant))), (e) => handleFirestoreError(e, OperationType.LIST, 'tenants'));
-
-    return () => {
-      unsubReceipts(); unsubProps(); unsubUnits(); unsubTenants();
-    };
+    fetchCollection<Receipt>('receipts').then(setReceipts).catch(console.error);
+    fetchCollection<Property>('properties').then(setProperties).catch(console.error);
+    fetchCollection<Unit>('units').then(setUnits).catch(console.error);
+    fetchCollection<Tenant>('tenants').then(setTenants).catch(console.error);
   }, []);
 
   const handleSaveReceipt = async () => {
     try {
       if (editingReceipt) {
-        await updateDoc(doc(db, 'receipts', editingReceipt.id), { ...newReceipt });
+        await apiUpdateDoc('receipts', editingReceipt.id, { ...newReceipt });
         toast.success('Recibo atualizado!');
       } else {
-        await addDoc(collection(db, 'receipts'), {
+        await createDoc('receipts', {
           ...newReceipt,
+          ownerId: user?.uid || '',
           createdAt: new Date().toISOString()
         });
         toast.success('Recibo criado!');
       }
+      fetchCollection<Receipt>('receipts').then(setReceipts).catch(console.error);
       setIsAddDialogOpen(false);
       resetForm();
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'receipts');
+      console.error(err);
+      toast.error('Erro ao guardar recibo.');
     }
   };
 
@@ -127,10 +122,12 @@ export default function Receipts() {
 
   const handleDeleteReceipt = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'receipts', id));
+      await apiDeleteDoc('receipts', id);
       toast.success('Recibo removido.');
+      fetchCollection<Receipt>('receipts').then(setReceipts).catch(console.error);
     } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, 'receipts');
+      console.error(err);
+      toast.error('Erro ao remover recibo.');
     }
   };
 

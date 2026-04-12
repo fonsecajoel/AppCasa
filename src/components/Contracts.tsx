@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { fetchCollection, createDoc, updateDoc as apiUpdateDoc, deleteDoc as apiDeleteDoc } from '../services/api';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -48,8 +47,10 @@ import { Contract, Property, Unit, Tenant } from '../types';
 import { toast } from 'sonner';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Contracts() {
+  const { user } = useAuth();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -73,33 +74,36 @@ export default function Contracts() {
     observations: '',
   });
 
-  useEffect(() => {
-    const unsubContracts = onSnapshot(collection(db, 'contracts'), (s) => setContracts(s.docs.map(d => ({ id: d.id, ...d.data() } as Contract))), (e) => handleFirestoreError(e, OperationType.LIST, 'contracts'));
-    const unsubProps = onSnapshot(collection(db, 'properties'), (s) => setProperties(s.docs.map(d => ({ id: d.id, ...d.data() } as Property))), (e) => handleFirestoreError(e, OperationType.LIST, 'properties'));
-    const unsubUnits = onSnapshot(collection(db, 'units'), (s) => setUnits(s.docs.map(d => ({ id: d.id, ...d.data() } as Unit))), (e) => handleFirestoreError(e, OperationType.LIST, 'units'));
-    const unsubTenants = onSnapshot(collection(db, 'tenants'), (s) => setTenants(s.docs.map(d => ({ id: d.id, ...d.data() } as Tenant))), (e) => handleFirestoreError(e, OperationType.LIST, 'tenants'));
+  const reload = () => {
+    fetchCollection<Contract>('contracts').then(setContracts).catch(console.error);
+    fetchCollection<Property>('properties').then(setProperties).catch(console.error);
+    fetchCollection<Unit>('units').then(setUnits).catch(console.error);
+    fetchCollection<Tenant>('tenants').then(setTenants).catch(console.error);
+  };
 
-    return () => {
-      unsubContracts(); unsubProps(); unsubUnits(); unsubTenants();
-    };
+  useEffect(() => {
+    reload();
   }, []);
 
   const handleSaveContract = async () => {
     try {
       if (editingContract) {
-        await updateDoc(doc(db, 'contracts', editingContract.id), { ...newContract });
+        await apiUpdateDoc('contracts', editingContract.id, { ...newContract });
         toast.success('Contrato atualizado!');
       } else {
-        await addDoc(collection(db, 'contracts'), {
+        await createDoc('contracts', {
           ...newContract,
+          ownerId: user?.uid || '',
           createdAt: new Date().toISOString()
         });
         toast.success('Contrato criado!');
       }
+      reload();
       setIsAddDialogOpen(false);
       resetForm();
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'contracts');
+      console.error(err);
+      toast.error('Erro ao guardar contrato.');
     }
   };
 
@@ -124,10 +128,12 @@ export default function Contracts() {
 
   const handleDeleteContract = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'contracts', id));
+      await apiDeleteDoc('contracts', id);
+      reload();
       toast.success('Contrato removido.');
     } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, 'contracts');
+      console.error(err);
+      toast.error('Erro ao remover contrato.');
     }
   };
 

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { fetchCollection, createDoc, updateDoc as apiUpdateDoc, deleteDoc as apiDeleteDoc } from '../services/api';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -38,6 +37,7 @@ import {
 import { Tenant, Contract, Payment, Property, Unit, Address } from '../types';
 import { toast } from 'sonner';
 import { AddressInput } from './AddressInput';
+import { useAuth } from '../contexts/AuthContext';
 
 const emptyAddress: Address = {
   street: '',
@@ -53,6 +53,7 @@ const emptyAddress: Address = {
 };
 
 export default function TenantManager() {
+  const { user } = useAuth();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -71,34 +72,37 @@ export default function TenantManager() {
     emergencyContact: '',
   });
 
-  useEffect(() => {
-    const unsubTenants = onSnapshot(collection(db, 'tenants'), (s) => setTenants(s.docs.map(d => ({ id: d.id, ...d.data() } as Tenant))), (e) => handleFirestoreError(e, OperationType.LIST, 'tenants'));
-    const unsubContracts = onSnapshot(collection(db, 'contracts'), (s) => setContracts(s.docs.map(d => ({ id: d.id, ...d.data() } as Contract))), (e) => handleFirestoreError(e, OperationType.LIST, 'contracts'));
-    const unsubPayments = onSnapshot(collection(db, 'payments'), (s) => setPayments(s.docs.map(d => ({ id: d.id, ...d.data() } as Payment))), (e) => handleFirestoreError(e, OperationType.LIST, 'payments'));
-    const unsubProps = onSnapshot(collection(db, 'properties'), (s) => setProperties(s.docs.map(d => ({ id: d.id, ...d.data() } as Property))), (e) => handleFirestoreError(e, OperationType.LIST, 'properties'));
-    const unsubUnits = onSnapshot(collection(db, 'units'), (s) => setUnits(s.docs.map(d => ({ id: d.id, ...d.data() } as Unit))), (e) => handleFirestoreError(e, OperationType.LIST, 'units'));
+  const reload = () => {
+    fetchCollection<Tenant>('tenants').then(setTenants).catch(console.error);
+    fetchCollection<Contract>('contracts').then(setContracts).catch(console.error);
+    fetchCollection<Payment>('payments').then(setPayments).catch(console.error);
+    fetchCollection<Property>('properties').then(setProperties).catch(console.error);
+    fetchCollection<Unit>('units').then(setUnits).catch(console.error);
+  };
 
-    return () => {
-      unsubTenants(); unsubContracts(); unsubPayments(); unsubProps(); unsubUnits();
-    };
+  useEffect(() => {
+    reload();
   }, []);
 
   const handleSaveTenant = async () => {
     try {
       if (editingTenant) {
-        await updateDoc(doc(db, 'tenants', editingTenant.id), { ...newTenant });
+        await apiUpdateDoc('tenants', editingTenant.id, { ...newTenant });
         toast.success('Inquilino atualizado!');
       } else {
-        await addDoc(collection(db, 'tenants'), {
+        await createDoc('tenants', {
           ...newTenant,
+          ownerId: user?.uid || '',
           createdAt: new Date().toISOString()
         });
         toast.success('Inquilino adicionado!');
       }
+      reload();
       setIsAddDialogOpen(false);
       resetForm();
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'tenants');
+      console.error(err);
+      toast.error('Erro ao guardar inquilino.');
     }
   };
 
@@ -109,10 +113,12 @@ export default function TenantManager() {
 
   const handleDeleteTenant = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'tenants', id));
+      await apiDeleteDoc('tenants', id);
+      reload();
       toast.success('Inquilino removido.');
     } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, 'tenants');
+      console.error(err);
+      toast.error('Erro ao remover inquilino.');
     }
   };
 

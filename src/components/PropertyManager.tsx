@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { fetchCollection, createDoc, updateDoc as apiUpdateDoc, deleteDoc as apiDeleteDoc, batchWrite } from '../services/api';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -47,6 +46,7 @@ import { Property, Unit, LandlordCharge, Contract, Address } from '../types';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { AddressInput } from './AddressInput';
+import { useAuth } from '../contexts/AuthContext';
 
 const emptyAddress: Address = {
   street: '',
@@ -62,6 +62,7 @@ const emptyAddress: Address = {
 };
 
 export default function PropertyManager() {
+  const { user } = useAuth();
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [charges, setCharges] = useState<LandlordCharge[]>([]);
@@ -80,66 +81,73 @@ export default function PropertyManager() {
   const [propertyUnits, setPropertyUnits] = useState<Partial<Unit>[]>([]);
   const [propertyCharges, setPropertyCharges] = useState<Partial<LandlordCharge>[]>([]);
 
-  useEffect(() => {
-    const unsubProps = onSnapshot(collection(db, 'properties'), (s) => setProperties(s.docs.map(d => ({ id: d.id, ...d.data() } as Property))), (e) => handleFirestoreError(e, OperationType.LIST, 'properties'));
-    const unsubUnits = onSnapshot(collection(db, 'units'), (s) => setUnits(s.docs.map(d => ({ id: d.id, ...d.data() } as Unit))), (e) => handleFirestoreError(e, OperationType.LIST, 'units'));
-    const unsubCharges = onSnapshot(collection(db, 'landlordExpenses'), (s) => setCharges(s.docs.map(d => ({ id: d.id, ...d.data() } as LandlordCharge))), (e) => handleFirestoreError(e, OperationType.LIST, 'landlordExpenses'));
-    const unsubContracts = onSnapshot(collection(db, 'contracts'), (s) => setContracts(s.docs.map(d => ({ id: d.id, ...d.data() } as Contract))), (e) => handleFirestoreError(e, OperationType.LIST, 'contracts'));
+  const reload = () => {
+    fetchCollection<Property>('properties').then(setProperties).catch(console.error);
+    fetchCollection<Unit>('units').then(setUnits).catch(console.error);
+    fetchCollection<LandlordCharge>('landlordExpenses').then(setCharges).catch(console.error);
+    fetchCollection<Contract>('contracts').then(setContracts).catch(console.error);
+  };
 
-    return () => {
-      unsubProps(); unsubUnits(); unsubCharges(); unsubContracts();
-    };
+  useEffect(() => {
+    reload();
   }, []);
 
   const handleSaveProperty = async () => {
     try {
-      const batch = writeBatch(db);
       let propertyId = editingProperty?.id;
 
       if (editingProperty) {
-        const propRef = doc(db, 'properties', editingProperty.id);
-        batch.update(propRef, { ...newProperty });
+        await apiUpdateDoc('properties', editingProperty.id, { ...newProperty });
       } else {
-        const propRef = doc(collection(db, 'properties'));
-        propertyId = propRef.id;
-        batch.set(propRef, {
+        propertyId = await createDoc('properties', {
           ...newProperty,
+          ownerId: user?.uid || '',
           createdAt: new Date().toISOString(),
         });
       }
 
-      // Handle Units
-      // For simplicity in this demo, we'll just add new ones. 
-      // In real app, we'd need to handle updates/deletes.
+      const operations: Array<{ type: 'set'; collection: string; data: Record<string, unknown> }> = [];
+
       propertyUnits.forEach(u => {
         if (!u.id) {
-          const unitRef = doc(collection(db, 'units'));
-          batch.set(unitRef, {
+          operations.push({
+            type: 'set',
+            collection: 'units',
+            data: {
             ...u,
             propertyId,
+            ownerId: user?.uid || '',
             createdAt: new Date().toISOString(),
+            },
           });
         }
       });
 
-      // Handle Charges
       propertyCharges.forEach(c => {
         if (!c.id) {
-          const chargeRef = doc(collection(db, 'landlordExpenses'));
-          batch.set(chargeRef, {
+          operations.push({
+            type: 'set',
+            collection: 'landlordExpenses',
+            data: {
             ...c,
             propertyId,
+            ownerId: user?.uid || '',
             createdAt: new Date().toISOString(),
+            },
           });
         }
       });
 
-      await batch.commit();
+      if (operations.length > 0) {
+        await batchWrite(operations);
+      }
+      reload();
       setIsAddDialogOpen(false);
       resetForm();
       toast.success(editingProperty ? 'Propriedade atualizada!' : 'Propriedade criada!');
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'properties');
+      console.error(err);
+      toast.error('Erro ao guardar imóvel.');
     }
   };
 
@@ -152,10 +160,12 @@ export default function PropertyManager() {
 
   const handleDeleteProperty = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'properties', id));
+      await apiDeleteDoc('properties', id);
+      reload();
       toast.success('Propriedade removida.');
     } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, 'properties');
+      console.error(err);
+      toast.error('Erro ao remover imóvel.');
     }
   };
 
