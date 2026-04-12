@@ -26,9 +26,24 @@ import Contracts from './components/Contracts';
 import Receipts from './components/Receipts';
 import Movements from './components/Movements';
 import Settings from './components/Settings';
+import Login from './components/Login';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 function AppContent() {
+  const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#F8FAFC]">
+        <div className="w-10 h-10 border-4 border-neutral-200 border-t-[#1E293B] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
 
   const navItems = [
     { id: 'dashboard', label: 'DASHBOARD', icon: LayoutDashboard },
@@ -104,6 +119,10 @@ function AppContent() {
 }
 
 export default function App() {
-  return <AppContent />;
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
 }
 

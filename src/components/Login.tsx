@@ -6,7 +6,11 @@ import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { toast } from 'sonner';
-import { LogIn, UserPlus, KeyRound, Mail } from 'lucide-react';
+import { LogIn, UserPlus, KeyRound, Mail, Zap } from 'lucide-react';
+
+const QUICK_EMAIL = 'admin@immoflow.pt';
+const QUICK_PASS = 'admin123';
+const QUICK_NAME = 'Admin';
 
 export default function Login() {
   const { login, loginWithEmail, registerWithEmail, resetPassword } = useAuth();
@@ -16,6 +20,23 @@ export default function Login() {
   const [name, setName] = useState('');
   const [resetEmail, setResetEmail] = useState('');
   const [showReset, setShowReset] = useState(false);
+
+  const handleQuickAccess = async () => {
+    setLoading(true);
+    try {
+      await loginWithEmail(QUICK_EMAIL, QUICK_PASS);
+      toast.success('Bem-vindo, Admin!');
+    } catch {
+      try {
+        await registerWithEmail(QUICK_EMAIL, QUICK_PASS, QUICK_NAME);
+        toast.success('Conta admin criada e sessão iniciada!');
+      } catch (regErr: any) {
+        toast.error('Erro no acesso rápido: ' + regErr.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,6 +197,15 @@ export default function Login() {
                 </form>
               </CardContent>
               <CardFooter className="flex flex-col space-y-4">
+                <Button 
+                  variant="outline" 
+                  className="w-full rounded-xl h-11 gap-2 border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800" 
+                  onClick={handleQuickAccess}
+                  disabled={loading}
+                >
+                  <Zap size={18} />
+                  {loading ? 'A entrar...' : 'Acesso Rápido (Admin)'}
+                </Button>
                 <div className="relative w-full">
                   <div className="absolute inset-0 flex items-center">
                     <span className="w-full border-t border-neutral-100" />
